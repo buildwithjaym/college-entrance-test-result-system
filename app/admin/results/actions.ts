@@ -9,12 +9,7 @@ export async function createResult(formData: FormData) {
   const applicantId = Number(formData.get("applicant_id"))
   const schoolYearId = Number(formData.get("school_year_id"))
   const testScheduleId = Number(formData.get("test_schedule_id"))
-
   const overallPercentage = Number(formData.get("overall_percentage"))
-  const mathPercentage = formData.get("math_percentage")
-  const englishPercentage = formData.get("english_percentage")
-  const sciencePercentage = formData.get("science_percentage")
-  const verbalPercentage = formData.get("verbal_percentage")
 
   const remarks = String(formData.get("remarks") || "").trim()
   const isPublished = formData.get("is_published") === "on"
@@ -23,17 +18,12 @@ export async function createResult(formData: FormData) {
   if (!schoolYearId) throw new Error("School year is required.")
   if (!testScheduleId) throw new Error("Test schedule is required.")
 
-  if (Number.isNaN(overallPercentage) || overallPercentage < 0 || overallPercentage > 100) {
+  if (
+    Number.isNaN(overallPercentage) ||
+    overallPercentage < 0 ||
+    overallPercentage > 100
+  ) {
     throw new Error("Overall percentage must be between 0 and 100.")
-  }
-
-  const parseOptionalPercentage = (value: FormDataEntryValue | null) => {
-    if (value === null || value === "") return null
-    const parsed = Number(value)
-    if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
-      throw new Error("Subject percentages must be between 0 and 100.")
-    }
-    return parsed
   }
 
   const { error } = await supabase.from("results").insert({
@@ -41,10 +31,6 @@ export async function createResult(formData: FormData) {
     school_year_id: schoolYearId,
     test_schedule_id: testScheduleId,
     overall_percentage: overallPercentage,
-    math_percentage: parseOptionalPercentage(mathPercentage),
-    english_percentage: parseOptionalPercentage(englishPercentage),
-    science_percentage: parseOptionalPercentage(sciencePercentage),
-    verbal_percentage: parseOptionalPercentage(verbalPercentage),
     remarks: remarks || null,
     is_published: isPublished,
     published_at: isPublished ? new Date().toISOString() : null,

@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, CalendarDays, FileCheck2, School, UserRound } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { PrintResultButton } from "@/components/student/print-result-button"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -17,56 +17,57 @@ function ResultState({
   description: string
 }) {
   return (
-    <main className="min-h-screen bg-background px-4 py-10 sm:px-6">
+    <main className="min-h-screen bg-slate-100 px-4 py-10 print:bg-white print:px-0 print:py-0">
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-[2rem] border border-primary/10 bg-white/95 p-8 shadow-sm">
-          <div className="mb-6">
+        <div className="rounded-2xl border border-blue-200 bg-white p-8 shadow-sm print:border print:shadow-none">
+          <div className="mb-6 print:hidden">
             <Link
               href="/student-login"
-              className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted"
+              className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Link>
           </div>
 
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-700">
             Result Access
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
             {title}
           </h1>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-3 text-sm leading-7 text-slate-600">{description}</p>
         </div>
       </div>
     </main>
   )
 }
 
-function InfoCard({
-  label,
-  value,
-  subtext,
-}: {
-  label: string
-  value: string
-  subtext?: string
-}) {
-  return (
-    <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-2 text-sm font-semibold text-foreground sm:text-base">
-        {value}
-      </p>
-      {subtext ? (
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{subtext}</p>
-      ) : null}
-    </div>
-  )
+function formatDate(date?: string | null) {
+  if (!date) return "Not available"
+
+  return new Date(date).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+function formatDateTime(date?: string | null) {
+  if (!date) return "Not available"
+
+  return new Date(date).toLocaleString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+function getSingleRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
 export default async function StudentResultPage({
@@ -92,7 +93,7 @@ export default async function StudentResultPage({
 
   const { data: applicant, error: applicantError } = await supabase
     .from("applicants")
-    .select("id, reference_number, first_name, middle_name, last_name, email")
+    .select("id, reference_number, first_name, middle_name, last_name")
     .eq("reference_number", referenceNumber)
     .ilike("last_name", lastName)
     .maybeSingle()
@@ -115,13 +116,10 @@ export default async function StudentResultPage({
     .select(`
       id,
       overall_percentage,
-      math_percentage,
-      english_percentage,
-      science_percentage,
-      verbal_percentage,
       remarks,
       is_published,
       published_at,
+      created_at,
       school_years (
         id,
         label
@@ -150,36 +148,22 @@ export default async function StudentResultPage({
     )
   }
 
-  const schoolYear = Array.isArray(result.school_years)
-    ? result.school_years[0]
-    : result.school_years
+  const schoolYear = getSingleRelation(result.school_years)
+  const schedule = getSingleRelation(result.test_schedules)
 
-  const schedule = Array.isArray(result.test_schedules)
-    ? result.test_schedules[0]
-    : result.test_schedules
-
-  const fullName = [
-    applicant.first_name,
-    applicant.middle_name,
-    applicant.last_name,
-  ]
+  const fullName = [applicant.last_name, applicant.first_name, applicant.middle_name]
     .filter(Boolean)
-    .join(" ")
+    .join(", ")
 
-  const subjectRows = [
-    { label: "Mathematics", value: result.math_percentage },
-    { label: "English", value: result.english_percentage },
-    { label: "Science", value: result.science_percentage },
-    { label: "Verbal", value: result.verbal_percentage },
-  ].filter((item) => item.value !== null)
+  const generatedAt = new Date().toISOString()
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8 sm:px-6 print:bg-white print:px-0">
-      <div className="mx-auto max-w-5xl space-y-6 print:max-w-none">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+    <main className="min-h-screen bg-slate-200 px-3 py-6 sm:px-6 print:bg-white print:p-0">
+      <div className="mx-auto max-w-6xl print:max-w-none">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <Link
             href="/student-login"
-            className="inline-flex items-center gap-2 rounded-full border border-primary/10 bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted"
+            className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -188,188 +172,160 @@ export default async function StudentResultPage({
           <PrintResultButton />
         </div>
 
-        <section className="overflow-hidden rounded-[2rem] border border-primary/10 bg-white/95 shadow-sm print:rounded-none print:border-0 print:shadow-none">
-          <div className="border-b border-primary/10 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 py-8 sm:px-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white shadow-md ring-1 ring-primary/10">
-                  <Image
-                    src="/logo.jpg"
-                    alt="Basilan State College logo"
-                    width={68}
-                    height={68}
-                    className="h-16 w-16 object-contain"
-                    priority
-                  />
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                    Basilan State College
-                  </p>
-                  <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                    Official Result Slip
-                  </h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Online Result Access System
-                  </p>
-                </div>
+        <section className="bg-white p-3 shadow-sm sm:p-4 print:p-0 print:shadow-none">
+          <div
+  id="result-slip"
+  data-reference-number={applicant.reference_number}
+  data-full-name={fullName}
+  data-last-name={applicant.last_name}
+  className="result-slip-small mx-auto w-full max-w-[760px] border-[2px] border-blue-700 bg-white p-[6px] print:max-w-none"
+>
+            <div className="relative overflow-hidden border border-blue-300 bg-white px-4 py-3 sm:px-5 sm:py-4 print:px-4 print:py-3">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.05]">
+                <Image
+                  src="/logo.jpg"
+                  alt="Basilan State College watermark"
+                  width={220}
+                  height={220}
+                  className="h-[120px] w-[120px] object-contain sm:h-[165px] sm:w-[165px]"
+                />
               </div>
 
-              <div className="rounded-3xl border border-primary/10 bg-white px-6 py-5 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                  Overall Percentage
-                </p>
-                <p className="mt-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                  {Number(result.overall_percentage).toFixed(2)}%
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Official recorded result
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-6 px-6 py-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                  Student Information
-                </p>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <InfoCard label="Full Name" value={fullName} />
-                  <InfoCard label="Reference Number" value={applicant.reference_number} />
-                  <InfoCard
-                    label="School Year"
-                    value={schoolYear?.label ?? "Not available"}
-                  />
-                  <InfoCard
-                    label="Exam Schedule"
-                    value={schedule?.name ?? "Not available"}
-                    subtext={
-                      schedule?.exam_date
-                        ? new Date(schedule.exam_date).toLocaleDateString("en-PH", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
-                        : undefined
-                    }
-                  />
-                </div>
-              </div>
-
-              {subjectRows.length > 0 ? (
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                    Subject Breakdown
-                  </p>
-
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-primary/10 bg-white">
-                    <table className="w-full text-left">
-                      <thead className="bg-primary/5">
-                        <tr>
-                          <th className="px-4 py-3 text-sm font-semibold text-muted-foreground">
-                            Subject
-                          </th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-muted-foreground">
-                            Percentage
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {subjectRows.map((item) => (
-                          <tr key={item.label} className="border-t border-primary/10">
-                            <td className="px-4 py-3 text-sm font-medium text-foreground">
-                              {item.label}
-                            </td>
-                            <td className="px-4 py-3 text-right text-sm font-bold text-primary">
-                              {Number(item.value).toFixed(2)}%
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              <div className="relative z-10">
+                <div className="grid grid-cols-[46px_1fr_46px] items-start gap-2 sm:grid-cols-[58px_1fr_58px] sm:gap-3">
+                  <div className="flex justify-start">
+                    <Image
+                      src="/logo.jpg"
+                      alt="Basilan State College logo"
+                      width={52}
+                      height={52}
+                      priority
+                      className="h-[38px] w-[38px] object-contain sm:h-[48px] sm:w-[48px]"
+                    />
                   </div>
-                </div>
-              ) : null}
-            </div>
 
-            <div className="space-y-5">
-              <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                  Result Status
-                </p>
+                  <div className="text-center">
+                    <p className="text-[7px] leading-3 text-slate-700 sm:text-[9px]">
+                      Republic of the Philippines
+                    </p>
+                    <p className="text-[7px] leading-3 text-slate-700 sm:text-[9px]">
+                      Basilan State College
+                    </p>
+                    <p className="text-[7.5px] font-semibold uppercase leading-3 text-slate-900 sm:text-[10px]">
+                      Testing and Evaluation Center
+                    </p>
+                    <p className="text-[7px] leading-3 text-slate-700 sm:text-[9px]">
+                      Isabela City, Basilan
+                    </p>
 
-                <div className="mt-4 flex items-start gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <FileCheck2 className="h-5 w-5" />
+                    <h1 className="mt-2.5 text-[17px] font-bold uppercase leading-none tracking-wide text-slate-900 sm:mt-3 sm:text-[24px]">
+                      College Entrance Test Result
+                    </h1>
+
+                    <p className="mt-1 text-[8px] text-slate-700 sm:text-[10px]">
+                      School Year {schoolYear?.label ?? "Not available"}
+                    </p>
+
+                    <div className="mt-3.5 sm:mt-4">
+                      <p className="text-[19px] font-bold uppercase leading-tight underline decoration-[1px] underline-offset-2 text-slate-900 sm:text-[28px]">
+                        {fullName}
+                      </p>
+                      <p className="mt-1 text-[7px] text-slate-700 sm:text-[9px]">
+                        Examinee&apos;s Name
+                      </p>
+                    </div>
+
+                    <div className="mt-4 sm:mt-5">
+                      <p className="text-[19px] font-bold uppercase leading-none text-slate-900 sm:text-[30px]">
+                        Overall Ability Rating
+                      </p>
+                      <p className="mt-1.5 text-[36px] font-extrabold leading-none tracking-tight text-red-600 sm:mt-2 sm:text-[50px]">
+                        {Number(result.overall_percentage).toFixed(2)}%
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      Published Official Result
-                    </p>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      This record is available for online viewing and download.
-                    </p>
+
+                  <div className="flex justify-end">
+                    <Image
+                      src="/testing.png"
+                      alt="Testing and Evaluation Center seal"
+                      width={52}
+                      height={52}
+                      className="h-[38px] w-[38px] object-contain opacity-95 sm:h-[48px] sm:w-[48px]"
+                    />
                   </div>
                 </div>
 
-                {result.published_at ? (
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    Published on{" "}
-                    {new Date(result.published_at).toLocaleDateString("en-PH", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                ) : null}
-              </div>
+                <div className="mt-4 border-t border-blue-100 pt-3.5 sm:mt-5 sm:pt-4">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                    <div className="space-y-1 text-[8px] leading-4 text-slate-800 sm:space-y-1.5 sm:text-[10px] sm:leading-5">
+                      <p>
+                        <span className="font-semibold">Valid until:</span>{" "}
+                        {schoolYear?.label ? `${schoolYear.label} only` : "Not available"}
+                      </p>
 
-              <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <UserRound className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                      Remarks
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-foreground">
-                      {result.remarks || "No remarks provided."}
-                    </p>
+                      <p>
+                        <span className="font-semibold">Date of Examination:</span>{" "}
+                        {formatDate(schedule?.exam_date)}
+                      </p>
+
+                      <p>
+                        <span className="font-semibold">Reference Number:</span>{" "}
+                        {applicant.reference_number}
+                      </p>
+
+                      {result.remarks ? (
+                        <p>
+                          <span className="font-semibold">Remarks:</span> {result.remarks}
+                        </p>
+                      ) : null}
+
+                      <p className="pt-1 text-[7.5px] leading-4 text-slate-700 sm:text-[9px]">
+                        Note: This CET result is subject to verification against the
+                        official Testing and Evaluation Center masterlist. Any erasure
+                        or alteration hereon nullifies this result.
+                      </p>
+                    </div>
+
+                    <div className="flex items-end justify-end">
+                      <div className="max-w-[235px] text-right">
+                        <div className="mb-2 h-4 sm:mb-3 sm:h-5" />
+                        <p className="text-[10px] font-semibold uppercase leading-tight text-slate-900 sm:text-[12px]">
+                          AL-BASSER S. SAPPAYANI, ED. D, RGC
+                        </p>
+                        <p className="text-[8px] text-slate-800 sm:text-[9px]">
+                          Director, TEC
+                        </p>
+                        <p className="text-[8px] text-slate-800 sm:text-[9px]">
+                          R.A. 9258, PRC License # 0000876
+                        </p>
+
+                        {result.published_at ? (
+                          <p className="mt-1 text-[7px] text-slate-600 sm:text-[8px]">
+                            Published: {formatDate(result.published_at)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="rounded-3xl border border-primary/10 bg-white p-5 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <CalendarDays className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                      Important Note
+                <div className="mt-3 border-t border-dashed border-blue-200 pt-2">
+                  <div className="flex items-center justify-between text-[7px] text-slate-500 sm:text-[8px]">
+                    <p>
+                      Generated by{" "}
+                      <span className="font-semibold text-slate-700">
+                        BASC-CET-Result-System
+                      </span>
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      This result is based on the official record published by the
-                      testing center. Final admission and enrollment may still be
-                      subject to institutional verification and other requirements.
+                    <p>
+                      Generated on{" "}
+                      <span className="font-medium text-slate-700">
+                        {formatDateTime(generatedAt)}
+                      </span>
                     </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5 print:hidden">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                  Download Options
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  You may print this page directly or save it as a PDF using the
-                  download button above.
-                </p>
               </div>
             </div>
           </div>
