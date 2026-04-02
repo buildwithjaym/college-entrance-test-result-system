@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const siteName = "Basilan State College CET Result System"
@@ -6,7 +7,7 @@ const siteDescription =
   "Official College Entrance Test result access, program recommendations, and school-year-based result distribution for Basilan State College."
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000"
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -74,7 +75,22 @@ export default function RootLayout({
         <div className="relative min-h-screen overflow-hidden">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(185,28,28,0.10),transparent_30%)]" />
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_bottom_right,rgba(185,28,28,0.03),transparent_45%,rgba(185,28,28,0.05))]" />
+
           {children}
+
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            duration={3200}
+            toastOptions={{
+              classNames: {
+                toast: "rounded-2xl",
+                title: "text-sm font-semibold",
+                description: "text-sm",
+              },
+            }}
+          />
         </div>
       </body>
     </html>

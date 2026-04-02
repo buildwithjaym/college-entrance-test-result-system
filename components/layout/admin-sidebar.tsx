@@ -27,15 +27,14 @@ const navSections = [
     title: "Operations",
     items: [
       { label: "Applicants", href: "/admin/applicants", icon: Users },
-      { label: "Schedules", href: "/admin/test-schedules", icon: CalendarDays },
-      { label: "Results", href: "/admin/results", icon: FileCheck2 },
-      { label: "Publish", href: "/admin/publish-results", icon: ClipboardList },
+      { label: "Publish Results", href: "/admin/publish-results", icon: ClipboardList },
     ],
   },
   {
     title: "Records",
     items: [
       { label: "Reports", href: "/admin/reports", icon: FileBarChart2 },
+      { label: "Schedules", href: "/admin/test-schedules", icon: CalendarDays },
       { label: "School Years", href: "/admin/school-years", icon: School },
     ],
   },
@@ -80,7 +79,7 @@ export function AdminSidebar() {
           <Link href="/admin/dashboard" className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white ring-1 ring-gray-200">
               <Image
-                src="/logo.jpg"
+                src="/testing.png"
                 alt="Logo"
                 width={36}
                 height={36}
@@ -91,7 +90,7 @@ export function AdminSidebar() {
 
             <div>
               <p className="text-[10px] uppercase tracking-wider text-gray-400">
-                BASC
+                Testing and Evaluation Center
               </p>
               <p className="text-sm font-semibold text-gray-900">
                 Admin Panel

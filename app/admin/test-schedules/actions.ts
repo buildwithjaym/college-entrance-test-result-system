@@ -3,15 +3,31 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 
-export async function createTestSchedule(formData: FormData) {
+function normalizeDate(value: string) {
+  const trimmed = value.trim()
+
+  if (!trimmed) {
+    return ""
+  }
+
+  const parsed = new Date(trimmed)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return ""
+  }
+
+  return trimmed
+}
+
+export async function createTestSchedule(formData: FormData): Promise<void> {
   const supabase = await createClient()
 
   const schoolYearId = Number(formData.get("school_year_id"))
-  const name = String(formData.get("name") || "").trim()
-  const examDate = String(formData.get("exam_date") || "").trim()
-  const notes = String(formData.get("notes") || "").trim()
+  const name = String(formData.get("name") ?? "").trim()
+  const examDate = normalizeDate(String(formData.get("exam_date") ?? ""))
+  const notes = String(formData.get("notes") ?? "").trim()
 
-  if (!schoolYearId) {
+  if (!schoolYearId || Number.isNaN(schoolYearId)) {
     throw new Error("School year is required.")
   }
 
@@ -20,7 +36,23 @@ export async function createTestSchedule(formData: FormData) {
   }
 
   if (!examDate) {
-    throw new Error("Exam date is required.")
+    throw new Error("A valid exam date is required.")
+  }
+
+  const { data: existingSchedule, error: existingScheduleError } = await supabase
+    .from("test_schedules")
+    .select("id")
+    .eq("school_year_id", schoolYearId)
+    .eq("name", name)
+    .eq("exam_date", examDate)
+    .maybeSingle()
+
+  if (existingScheduleError) {
+    throw new Error(existingScheduleError.message)
+  }
+
+  if (existingSchedule) {
+    throw new Error("This test schedule already exists.")
   }
 
   const { error } = await supabase.from("test_schedules").insert({

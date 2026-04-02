@@ -6,7 +6,13 @@ import {
   deleteApplicant,
   updateApplicant,
 } from "@/app/admin/applicants/actions"
-import { useFormStatus } from "react-dom"
+import {
+  dismissToast,
+  showError,
+  showInfo,
+  showLoading,
+  showSuccess,
+} from "@/lib/toast"
 
 type Applicant = {
   id: number
@@ -18,14 +24,12 @@ type Applicant = {
   created_at: string
 }
 
-function SaveButton() {
-  const { pending } = useFormStatus()
-
+function SaveButton({ pending }: { pending: boolean }) {
   return (
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 items-center justify-center rounded-xl bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+      className="inline-flex h-9 items-center justify-center rounded-xl bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? (
         <>
@@ -42,14 +46,12 @@ function SaveButton() {
   )
 }
 
-function DeleteButton() {
-  const { pending } = useFormStatus()
-
+function DeleteButton({ pending }: { pending: boolean }) {
   return (
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+      className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? (
         <>
@@ -68,11 +70,51 @@ function DeleteButton() {
 
 function ApplicantCard({ applicant }: { applicant: Applicant }) {
   const [editing, setEditing] = useState(false)
+  const [savePending, setSavePending] = useState(false)
+  const [deletePending, setDeletePending] = useState(false)
 
   if (editing) {
+    async function handleUpdate(formData: FormData) {
+      const firstName = String(formData.get("first_name") ?? "").trim()
+      const lastName = String(formData.get("last_name") ?? "").trim()
+      const email = String(formData.get("email") ?? "").trim()
+
+      if (!firstName) {
+        showError("First name is required.")
+        return
+      }
+
+      if (!lastName) {
+        showError("Last name is required.")
+        return
+      }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError("Please enter a valid email address.")
+        return
+      }
+
+      setSavePending(true)
+      const toastId = showLoading("Updating applicant...")
+
+      try {
+        await updateApplicant(formData)
+        dismissToast(toastId)
+        showSuccess("Applicant updated successfully.")
+        setEditing(false)
+      } catch (error) {
+        dismissToast(toastId)
+        showError(
+          error instanceof Error ? error.message : "Failed to update applicant."
+        )
+      } finally {
+        setSavePending(false)
+      }
+    }
+
     return (
       <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4">
-        <form action={updateApplicant} className="space-y-4">
+        <form action={handleUpdate} className="space-y-4">
           <input type="hidden" name="id" value={applicant.id} />
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -85,6 +127,7 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
                 defaultValue={applicant.reference_number}
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
                 required
+                disabled={savePending}
               />
             </div>
 
@@ -97,6 +140,7 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
                 type="email"
                 defaultValue={applicant.email ?? ""}
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                disabled={savePending}
               />
             </div>
           </div>
@@ -111,6 +155,7 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
                 defaultValue={applicant.first_name}
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
                 required
+                disabled={savePending}
               />
             </div>
 
@@ -122,6 +167,7 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
                 name="middle_name"
                 defaultValue={applicant.middle_name ?? ""}
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                disabled={savePending}
               />
             </div>
 
@@ -134,17 +180,22 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
                 defaultValue={applicant.last_name}
                 className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
                 required
+                disabled={savePending}
               />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <SaveButton />
+            <SaveButton pending={savePending} />
 
             <button
               type="button"
-              onClick={() => setEditing(false)}
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              onClick={() => {
+                setEditing(false)
+                showInfo("Edit cancelled.")
+              }}
+              disabled={savePending}
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <X className="mr-2 h-4 w-4" />
               Cancel
@@ -153,6 +204,24 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
         </form>
       </div>
     )
+  }
+
+  async function handleDelete(formData: FormData) {
+    setDeletePending(true)
+    const toastId = showLoading("Deleting applicant...")
+
+    try {
+      await deleteApplicant(formData)
+      dismissToast(toastId)
+      showSuccess("Applicant deleted successfully.")
+    } catch (error) {
+      dismissToast(toastId)
+      showError(
+        error instanceof Error ? error.message : "Failed to delete applicant."
+      )
+    } finally {
+      setDeletePending(false)
+    }
   }
 
   return (
@@ -181,16 +250,19 @@ function ApplicantCard({ applicant }: { applicant: Applicant }) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            setEditing(true)
+            showInfo("Edit mode opened.")
+          }}
           className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         >
           <Edit3 className="mr-2 h-4 w-4" />
           Edit
         </button>
 
-        <form action={deleteApplicant}>
+        <form action={handleDelete}>
           <input type="hidden" name="id" value={applicant.id} />
-          <DeleteButton />
+          <DeleteButton pending={deletePending} />
         </form>
       </div>
     </div>
