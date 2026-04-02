@@ -164,7 +164,7 @@ export default async function StudentResultPage({
   return (
     <main className="min-h-screen bg-slate-200 px-3 py-4 sm:px-4 sm:py-6 md:px-6">
       <div className="mx-auto max-w-[1280px]">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <Link
             href="/student-login"
             className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
