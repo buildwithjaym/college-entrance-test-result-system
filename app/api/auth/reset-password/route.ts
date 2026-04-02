@@ -50,24 +50,19 @@ export async function POST(request: Request) {
 
     if (profileError) {
       return NextResponse.json(
-        {
-          message: "Unable to reset your password right now. Please try again.",
-        },
+        { message: "Unable to reset your password right now. Please try again." },
         { status: 500 }
       )
     }
 
     if (!profile) {
       return NextResponse.json(
-        {
-          message: "The OTP is invalid or has expired. Please request a new one.",
-        },
+        { message: "The OTP is invalid or has expired. Please request a new one." },
         { status: 400 }
       )
     }
 
     const otpHash = hashOtp(otp)
-    const nowIso = new Date().toISOString()
 
     const { data: otpRecord, error: otpError } = await supabase
       .from("password_reset_otps")
@@ -81,61 +76,47 @@ export async function POST(request: Request) {
 
     if (otpError) {
       return NextResponse.json(
-        {
-          message: "Unable to reset your password right now. Please try again.",
-        },
+        { message: "Unable to reset your password right now. Please try again." },
         { status: 500 }
       )
     }
 
     if (!otpRecord) {
       return NextResponse.json(
-        {
-          message: "The OTP is invalid or has expired. Please request a new one.",
-        },
+        { message: "The OTP is invalid or has expired. Please request a new one." },
         { status: 400 }
       )
     }
 
     if (otpRecord.used_at) {
       return NextResponse.json(
-        {
-          message: "This OTP has already been used. Please request a new one.",
-        },
+        { message: "This OTP has already been used. Please request a new one." },
         { status: 400 }
       )
     }
 
-    if (otpRecord.expires_at < nowIso) {
+    if (new Date(otpRecord.expires_at) < new Date()) {
       return NextResponse.json(
-        {
-          message: "The OTP is invalid or has expired. Please request a new one.",
-        },
+        { message: "The OTP is invalid or has expired. Please request a new one." },
         { status: 400 }
       )
     }
 
     if (otpRecord.otp_hash !== otpHash) {
       return NextResponse.json(
-        {
-          message: "The OTP is invalid or has expired. Please request a new one.",
-        },
+        { message: "The OTP is invalid or has expired. Please request a new one." },
         { status: 400 }
       )
     }
 
     const { error: authUpdateError } = await supabase.auth.admin.updateUserById(
       profile.id,
-      {
-        password: newPassword,
-      }
+      { password: newPassword }
     )
 
     if (authUpdateError) {
       return NextResponse.json(
-        {
-          message: "Unable to reset your password right now. Please try again.",
-        },
+        { message: "Unable to reset your password right now. Please try again." },
         { status: 500 }
       )
     }
@@ -147,23 +128,19 @@ export async function POST(request: Request) {
 
     if (profileUpdateError) {
       return NextResponse.json(
-        {
-          message: "Your password was updated, but setup could not be completed.",
-        },
+        { message: "Your password was updated, but setup could not be completed." },
         { status: 500 }
       )
     }
 
     const { error: otpUseError } = await supabase
       .from("password_reset_otps")
-      .update({ used_at: nowIso })
+      .update({ used_at: new Date().toISOString() })
       .eq("id", otpRecord.id)
 
     if (otpUseError) {
       return NextResponse.json(
-        {
-          message: "Your password was updated, but OTP finalization failed.",
-        },
+        { message: "Your password was updated, but OTP finalization failed." },
         { status: 500 }
       )
     }
@@ -173,9 +150,7 @@ export async function POST(request: Request) {
     })
   } catch {
     return NextResponse.json(
-      {
-        message: "Something went wrong. Please try again.",
-      },
+      { message: "Something went wrong. Please try again." },
       { status: 500 }
     )
   }
