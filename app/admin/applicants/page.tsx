@@ -1,275 +1,181 @@
-import { Mail, Plus, UserRound, Users } from "lucide-react"
+import { Mail, Plus, UserRound, Users, Search } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { createApplicant } from "./actions"
 
-export default async function ApplicantsPage() {
+export default async function ApplicantsPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string }
+}) {
+  const query = searchParams?.q?.trim() || ""
+
   const supabase = await createClient()
 
-  const { data: applicants, error } = await supabase
+  let request = supabase
     .from("applicants")
     .select("*")
     .order("created_at", { ascending: false })
 
-  if (error) {
-    throw new Error(error.message)
+  if (query) {
+    request = request.or(
+      `reference_number.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%`
+    )
   }
 
+  const { data: applicants, error } = await request
+
+  if (error) throw new Error(error.message)
+
   const totalApplicants = applicants?.length ?? 0
-  const latestApplicant = applicants?.[0] ?? null
+  const latestApplicant = applicants?.[0]
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] border border-primary/10 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-          Result Operations
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
+
+      {/* HERO */}
+      <section className="rounded-[2rem] border border-red-100 bg-gradient-to-r from-red-50 to-white p-6">
+        <h1 className="text-2xl font-bold text-gray-900">
           Applicants
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-          Manage applicant records used for result lookup, publication, and
-          downloadable student result access.
+        <p className="text-sm text-gray-500 mt-2">
+          Manage and register examinees for CET processing.
         </p>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-3xl border border-primary/10 bg-white/95 p-6 shadow-sm">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                Overview
-              </p>
-              <h2 className="mt-1 text-xl font-bold text-foreground">
-                Applicant Records
-              </h2>
-            </div>
+      {/* MAIN GRID */}
+      <section className="grid gap-6 xl:grid-cols-[360px_1fr]">
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Users className="h-5 w-5" />
-            </div>
-          </div>
+        {/* LEFT: QUICK ADD */}
+        <div className="rounded-3xl border border-red-100 bg-white p-5">
+          <p className="text-sm font-semibold text-red-600 uppercase">
+            Quick Add
+          </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5">
-              <p className="text-sm text-muted-foreground">Total Applicants</p>
-              <p className="mt-2 text-2xl font-bold text-foreground">
-                {totalApplicants}
-              </p>
-            </div>
+          <h2 className="text-lg font-bold mt-1">
+            New Applicant
+          </h2>
 
-            <div className="rounded-2xl border border-primary/10 bg-primary/5 p-5">
-              <p className="text-sm text-muted-foreground">Latest Applicant</p>
-              <p className="mt-2 text-lg font-bold text-foreground">
-                {latestApplicant
-                  ? `${latestApplicant.first_name} ${latestApplicant.last_name}`
-                  : "No applicants yet"}
-              </p>
-            </div>
-          </div>
+          <form action={createApplicant} className="space-y-4 mt-4">
 
-          <div className="mt-4 rounded-2xl border border-primary/10 bg-white p-5">
-            <p className="text-sm text-muted-foreground">Latest Reference Number</p>
-            <p className="mt-2 text-lg font-bold text-foreground">
-              {latestApplicant?.reference_number ?? "Not available"}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Applicant records are used for online result searching and matching.
-            </p>
-          </div>
-        </div>
+            <input
+              name="reference_number"
+              placeholder="Reference Number"
+              required
+              className="h-11 w-full rounded-xl border px-3 text-sm focus:ring-2 focus:ring-red-200"
+            />
 
-        <div className="rounded-3xl border border-primary/10 bg-white/95 p-6 shadow-sm">
-          <div className="mb-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-              Create Applicant
-            </p>
-            <h2 className="mt-1 text-xl font-bold text-foreground">
-              Add a new applicant
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Enter applicant information that will later connect to uploaded results.
-            </p>
-          </div>
-
-          <form action={createApplicant} className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="reference_number"
-                className="text-sm font-medium text-foreground"
-              >
-                Reference Number
-              </label>
+            <div className="grid grid-cols-2 gap-3">
               <input
-                id="reference_number"
-                name="reference_number"
-                type="text"
-                placeholder="e.g. BASC-2025-0001"
+                name="first_name"
+                placeholder="First Name"
                 required
-                className="h-12 w-full rounded-2xl border border-primary/10 bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/20"
+                className="h-11 rounded-xl border px-3 text-sm focus:ring-2 focus:ring-red-200"
               />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label
-                  htmlFor="first_name"
-                  className="text-sm font-medium text-foreground"
-                >
-                  First Name
-                </label>
-                <input
-                  id="first_name"
-                  name="first_name"
-                  type="text"
-                  placeholder="Enter first name"
-                  required
-                  className="h-12 w-full rounded-2xl border border-primary/10 bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="middle_name"
-                  className="text-sm font-medium text-foreground"
-                >
-                  Middle Name <span className="text-muted-foreground">(optional)</span>
-                </label>
-                <input
-                  id="middle_name"
-                  name="middle_name"
-                  type="text"
-                  placeholder="Enter middle name"
-                  className="h-12 w-full rounded-2xl border border-primary/10 bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="last_name"
-                className="text-sm font-medium text-foreground"
-              >
-                Last Name
-              </label>
               <input
-                id="last_name"
                 name="last_name"
-                type="text"
-                placeholder="Enter last name"
+                placeholder="Last Name"
                 required
-                className="h-12 w-full rounded-2xl border border-primary/10 bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/20"
+                className="h-11 rounded-xl border px-3 text-sm focus:ring-2 focus:ring-red-200"
               />
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
-                Email <span className="text-muted-foreground">(optional)</span>
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Enter email address"
-                className="h-12 w-full rounded-2xl border border-primary/10 bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary/30 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+            <input
+              name="middle_name"
+              placeholder="Middle Name (optional)"
+              className="h-11 w-full rounded-xl border px-3 text-sm focus:ring-2 focus:ring-red-200"
+            />
 
-            <button
-              type="submit"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg transition hover:bg-primary/90"
-            >
+            <input
+              name="email"
+              placeholder="Email (optional)"
+              className="h-11 w-full rounded-xl border px-3 text-sm focus:ring-2 focus:ring-red-200"
+            />
+
+            <button className="w-full h-11 bg-red-600 text-white rounded-xl flex items-center justify-center gap-2">
               <Plus className="h-4 w-4" />
               Add Applicant
             </button>
           </form>
         </div>
-      </section>
 
-      <section className="rounded-3xl border border-primary/10 bg-white/95 p-6 shadow-sm">
-        <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-            Records
-          </p>
-          <h2 className="mt-1 text-xl font-bold text-foreground">
-            Existing applicants
-          </h2>
+        {/* RIGHT */}
+        <div className="space-y-4">
+
+          {/* SEARCH + STATS */}
+          <div className="rounded-3xl border bg-white p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+              <div>
+                <p className="text-sm text-gray-500">Total Applicants</p>
+                <p className="text-2xl font-bold">{totalApplicants}</p>
+              </div>
+
+              <form className="w-full max-w-sm">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    name="q"
+                    defaultValue={query}
+                    placeholder="Search applicant..."
+                    className="w-full h-10 pl-10 rounded-xl border text-sm focus:ring-2 focus:ring-red-200"
+                  />
+                </div>
+              </form>
+
+            </div>
+          </div>
+
+          {/* LIST (CARD STYLE - BETTER UX THAN TABLE) */}
+          <div className="rounded-3xl border bg-white p-5 space-y-3">
+
+            {applicants?.length ? (
+              applicants.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between rounded-xl border p-4 hover:bg-red-50/40 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 flex items-center justify-center bg-red-50 text-red-600 rounded-xl">
+                      <UserRound className="h-4 w-4" />
+                    </div>
+
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {[item.first_name, item.middle_name, item.last_name]
+                          .filter(Boolean)
+                          .join(" ")}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        {item.reference_number}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-500">
+                    {item.email ? (
+                      <span className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        {item.email}
+                      </span>
+                    ) : (
+                      "No email"
+                    )}
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-sm text-gray-500 py-10">
+                No applicants yet.
+              </div>
+            )}
+
+          </div>
         </div>
-
-        {applicants && applicants.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left">
-              <thead>
-                <tr className="border-b border-primary/10">
-                  <th className="pb-4 text-sm font-semibold text-muted-foreground">
-                    Applicant
-                  </th>
-                  <th className="pb-4 text-sm font-semibold text-muted-foreground">
-                    Reference Number
-                  </th>
-                  <th className="pb-4 text-sm font-semibold text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="pb-4 text-sm font-semibold text-muted-foreground">
-                    Created
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {applicants.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-primary/5 last:border-b-0"
-                  >
-                    <td className="py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                          <UserRound className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {[item.first_name, item.middle_name, item.last_name]
-                              .filter(Boolean)
-                              .join(" ")}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="py-4 text-sm font-medium text-foreground">
-                      {item.reference_number}
-                    </td>
-
-                    <td className="py-4 text-sm text-muted-foreground">
-                      {item.email ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {item.email}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-
-                    <td className="py-4 text-sm text-muted-foreground">
-                      {new Date(item.created_at).toLocaleDateString("en-PH", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-primary/15 bg-primary/5 px-4 py-10 text-center text-sm text-muted-foreground">
-            No applicants have been added yet.
-          </div>
-        )}
       </section>
     </div>
   )
