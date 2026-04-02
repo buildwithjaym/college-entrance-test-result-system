@@ -62,14 +62,14 @@ export function ResultSheet({
         data-full-name={fullName}
         data-last-name={lastName}
         style={{
-  width: "1600px",
-  height: "800px",
-  background: "#ffffff",
-  padding: "20px",
-  boxSizing: "border-box",
-  fontFamily: '"Times New Roman", Times, serif',
-  color: "#0f172a",
-}}
+          width: "1600px",
+          height: "800px",
+          background: "#ffffff",
+          padding: "20px",
+          boxSizing: "border-box",
+          fontFamily: '"Times New Roman", Times, serif',
+          color: "#0f172a",
+        }}
       >
         <div
           style={{
@@ -130,14 +130,34 @@ export function ResultSheet({
                   alignItems: "start",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "flex-start", paddingTop: "6px" }}>
-                  <ExportImg
-                    src="/logo.jpg"
-                    alt="Basilan State College logo"
-                    width={78}
-                    height={78}
-                    style={{ width: "78px", height: "78px", objectFit: "contain" }}
-                  />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    paddingTop: "6px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "78px",
+                      height: "78px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ExportImg
+                      src="/logo.jpg"
+                      alt="Basilan State College logo"
+                      width={78}
+                      height={78}
+                      style={{
+                        width: "78px",
+                        height: "78px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div style={{ textAlign: "center" }}>
@@ -192,7 +212,9 @@ export function ResultSheet({
                     {fullName}
                   </p>
 
-                  <p style={{ margin: "8px 0 0", fontSize: "16px" }}>Examinee&apos;s Name</p>
+                  <p style={{ margin: "8px 0 0", fontSize: "16px" }}>
+                    Examinee&apos;s Name
+                  </p>
 
                   <p
                     style={{
@@ -219,14 +241,34 @@ export function ResultSheet({
                   </p>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "6px" }}>
-                  <ExportImg
-                    src="/testing.png"
-                    alt="Testing and Evaluation Center seal"
-                    width={78}
-                    height={78}
-                    style={{ width: "78px", height: "78px", objectFit: "contain" }}
-                  />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    paddingTop: "6px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "78px",
+                      height: "78px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <ExportImg
+                      src="/testing.png"
+                      alt="Testing and Evaluation Center seal"
+                      width={78}
+                      height={78}
+                      style={{
+                        width: "78px",
+                        height: "78px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -239,7 +281,13 @@ export function ResultSheet({
                   gap: "36px",
                 }}
               >
-                <div style={{ fontSize: "17px", lineHeight: 1.7, textAlign: "left" }}>
+                <div
+                  style={{
+                    fontSize: "17px",
+                    lineHeight: 1.7,
+                    textAlign: "left",
+                  }}
+                >
                   <p style={{ margin: 0 }}>
                     <strong>Valid until:</strong>{" "}
                     {schoolYearLabel ? `${schoolYearLabel} only` : "Not available"}
@@ -257,14 +305,26 @@ export function ResultSheet({
                     </p>
                   ) : null}
 
-                  <p style={{ margin: "14px 0 0", fontSize: "14px", lineHeight: 1.65 }}>
-                    Note: This CET result is subject to verification against the official
-                    Testing and Evaluation Center masterlist. Any erasure or alteration
-                    hereon nullifies this result.
+                  <p
+                    style={{
+                      margin: "14px 0 0",
+                      fontSize: "14px",
+                      lineHeight: 1.65,
+                    }}
+                  >
+                    Note: This CET result is subject to verification against the
+                    official Testing and Evaluation Center masterlist. Any erasure
+                    or alteration hereon nullifies this result.
                   </p>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "end" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "end",
+                  }}
+                >
                   <div style={{ maxWidth: "340px", textAlign: "right" }}>
                     <div style={{ height: "26px" }} />
                     <p
@@ -284,7 +344,13 @@ export function ResultSheet({
                     </p>
 
                     {formattedPublishedAt ? (
-                      <p style={{ margin: "8px 0 0", fontSize: "13px", color: "#475569" }}>
+                      <p
+                        style={{
+                          margin: "8px 0 0",
+                          fontSize: "13px",
+                          color: "#475569",
+                        }}
+                      >
                         Published: {formattedPublishedAt}
                       </p>
                     ) : null}
@@ -304,11 +370,15 @@ export function ResultSheet({
               >
                 <p style={{ margin: 0 }}>
                   Generated by{" "}
-                  <strong style={{ color: "#334155" }}>BASC-CET-Result-System</strong>
+                  <strong style={{ color: "#334155" }}>
+                    BASC-CET-Result-System
+                  </strong>
                 </p>
                 <p style={{ margin: 0 }}>
                   Generated on{" "}
-                  <strong style={{ color: "#334155" }}>{formattedGeneratedAt}</strong>
+                  <strong style={{ color: "#334155" }}>
+                    {formattedGeneratedAt}
+                  </strong>
                 </p>
               </div>
             </div>
@@ -373,18 +443,20 @@ export function ResultSheet({
             </div>
 
             <div className="relative z-10 flex h-full flex-col">
-              <div className="grid grid-cols-[48px_1fr_48px] items-start gap-2 md:grid-cols-[90px_1fr_90px] md:gap-5">
+              <div className="grid grid-cols-[60px_1fr_60px] items-start gap-2 md:grid-cols-[100px_1fr_100px] md:gap-5">
                 <div className="flex justify-start pt-1">
-                  <Image
-                    src="/logo.jpg"
-                    alt="Basilan State College logo"
-                    width={78}
-                    height={78}
-                    priority
-                    loading="eager"
-                    unoptimized
-                    className="h-[180px] w-[180px] object-contain md:h-[320px] md:w-[320px]"
-                  />
+                  <div className="flex h-12 w-12 items-center justify-center md:h-[78px] md:w-[78px]">
+                    <Image
+                      src="/logo.jpg"
+                      alt="Basilan State College logo"
+                      width={78}
+                      height={78}
+                      priority
+                      loading="eager"
+                      unoptimized
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
                 </div>
 
                 <div className="text-center">
@@ -425,16 +497,18 @@ export function ResultSheet({
                 </div>
 
                 <div className="flex justify-end pt-1">
-                  <Image
-                    src="/testing.png"
-                    alt="Testing and Evaluation Center seal"
-                    width={78}
-                    height={78}
-                    priority
-                    loading="eager"
-                    unoptimized
-                    className="h-12 w-12 object-contain md:h-[78px] md:w-[78px]"
-                  />
+                  <div className="flex h-12 w-12 items-center justify-center md:h-[78px] md:w-[78px]">
+                    <Image
+                      src="/testing.png"
+                      alt="Testing and Evaluation Center seal"
+                      width={78}
+                      height={78}
+                      priority
+                      loading="eager"
+                      unoptimized
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -445,10 +519,12 @@ export function ResultSheet({
                     {schoolYearLabel ? `${schoolYearLabel} only` : "Not available"}
                   </p>
                   <p>
-                    <span className="font-semibold">Date of Examination:</span> {formattedExamDate}
+                    <span className="font-semibold">Date of Examination:</span>{" "}
+                    {formattedExamDate}
                   </p>
                   <p>
-                    <span className="font-semibold">Reference Number:</span> {referenceNumber}
+                    <span className="font-semibold">Reference Number:</span>{" "}
+                    {referenceNumber}
                   </p>
 
                   {remarks ? (
@@ -458,19 +534,21 @@ export function ResultSheet({
                   ) : null}
 
                   <p className="pt-1 text-[10px] leading-5 text-slate-700 md:mt-4 md:text-[14px] md:leading-7">
-                    Note: This CET result is subject to verification against the official
-                    Testing and Evaluation Center masterlist. Any erasure or alteration
-                    hereon nullifies this result.
+                    Note: This CET result is subject to verification against the
+                    official Testing and Evaluation Center masterlist. Any erasure
+                    or alteration hereon nullifies this result.
                   </p>
                 </div>
 
-                <div className="mt-5 flex justify-end border-t border-blue-200 pt-4 md:mt-0 md:border-t-0 md:pt-0 md:items-end">
+                <div className="mt-5 flex justify-end border-t border-blue-200 pt-4 md:mt-0 md:items-end md:border-t-0 md:pt-0">
                   <div className="max-w-[280px] text-right md:max-w-[340px]">
                     <div className="mb-2 h-4 md:h-6" />
                     <p className="text-[12px] font-semibold uppercase leading-tight text-slate-900 md:text-[22px]">
                       AL-BASSER S. SAPPAYANI, ED. D, RGC
                     </p>
-                    <p className="text-[10px] text-slate-800 md:text-[15px]">Director, TEC</p>
+                    <p className="text-[10px] text-slate-800 md:text-[15px]">
+                      Director, TEC
+                    </p>
                     <p className="text-[10px] text-slate-800 md:text-[15px]">
                       R.A. 9258, PRC License # 0000876
                     </p>
@@ -488,11 +566,15 @@ export function ResultSheet({
                 <div className="flex flex-col gap-1 text-[8px] text-slate-500 md:flex-row md:items-center md:justify-between md:text-[12px]">
                   <p>
                     Generated by{" "}
-                    <span className="font-semibold text-slate-700">BASC-CET-Result-System</span>
+                    <span className="font-semibold text-slate-700">
+                      BASC-CET-Result-System
+                    </span>
                   </p>
                   <p>
                     Generated on{" "}
-                    <span className="font-medium text-slate-700">{formattedGeneratedAt}</span>
+                    <span className="font-medium text-slate-700">
+                      {formattedGeneratedAt}
+                    </span>
                   </p>
                 </div>
               </div>
