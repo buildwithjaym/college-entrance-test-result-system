@@ -7,7 +7,7 @@ const siteDescription =
   "Official College Entrance Test result access, program recommendations, and school-year-based result distribution for Basilan State College."
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000"
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://basc-cet.site"
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
