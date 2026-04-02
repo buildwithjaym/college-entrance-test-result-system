@@ -52,7 +52,7 @@ export function ApplicantModal({
   async function action(formData: FormData) {
     const firstName = String(formData.get("first_name") ?? "").trim()
     const lastName = String(formData.get("last_name") ?? "").trim()
-    const email = String(formData.get("email") ?? "").trim()
+    const email = String(formData.get("email") ?? "").trim().toLowerCase()
 
     if (!firstName) {
       showError("First name is required.")
@@ -64,10 +64,17 @@ export function ApplicantModal({
       return
     }
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!email) {
+      showError("Email is required.")
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showError("Please enter a valid email address.")
       return
     }
+
+    formData.set("email", email)
 
     setPending(true)
     const toastId = showLoading("Saving applicant...")
@@ -96,8 +103,9 @@ export function ApplicantModal({
             Add new applicant
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-500">
-            Leave the reference number blank if you want the system to generate
-            it automatically.
+            Leave the reference number blank to auto-generate it. The applicant
+            will log in using their email and this reference number as their
+            temporary password, then they will be forced to change it.
           </DialogDescription>
         </DialogHeader>
 
@@ -158,6 +166,7 @@ export function ApplicantModal({
             <input
               name="email"
               type="email"
+              required
               disabled={pending}
               className="h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50"
             />

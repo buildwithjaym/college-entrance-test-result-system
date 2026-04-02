@@ -1,13 +1,36 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { PrintResultButton } from "@/components/student/print-result-button"
 import { ResultSheet } from "@/components/student/result-sheet"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 
-type SearchParams = Promise<{
-  referenceNumber?: string
-  lastName?: string
-}>
+function formatDate(date?: string | null) {
+  if (!date) return "Not available"
+
+  return new Date(date).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+function formatDateTime(date?: string | null) {
+  if (!date) return "Not available"
+
+  return new Date(date).toLocaleString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+function getSingleRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
+}
 
 function ResultState({
   title,
@@ -43,60 +66,41 @@ function ResultState({
   )
 }
 
-function formatDate(date?: string | null) {
-  if (!date) return "Not available"
+export default async function StudentResultPage() {
+  const supabase = await createClient()
 
-  return new Date(date).toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-}
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
 
-function formatDateTime(date?: string | null) {
-  if (!date) return "Not available"
-
-  return new Date(date).toLocaleString("en-PH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })
-}
-
-function getSingleRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null
-  return Array.isArray(value) ? (value[0] ?? null) : value
-}
-
-export default async function StudentResultPage({
-  searchParams,
-}: {
-  searchParams: SearchParams
-}) {
-  const params = await searchParams
-
-  const referenceNumber = params.referenceNumber?.trim() || ""
-  const lastName = params.lastName?.trim() || ""
-
-  if (!referenceNumber || !lastName) {
-    return (
-      <ResultState
-        title="Missing result lookup details"
-        description="Please provide your reference number and last name to view your result."
-      />
-    )
+  if (userError || !user) {
+    redirect("/student-login")
   }
 
-  const supabase = createAdminClient()
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role, must_change_password")
+    .eq("id", user.id)
+    .single()
+
+  if (profileError || !profile) {
+    redirect("/student-login")
+  }
+
+  if (profile.role !== "applicant") {
+    redirect("/student-login")
+  }
+
+  if (profile.must_change_password) {
+    redirect("/change-password")
+  }
 
   const { data: applicant, error: applicantError } = await supabase
     .from("applicants")
-    .select("id, reference_number, first_name, middle_name, last_name")
-    .eq("reference_number", referenceNumber)
-    .ilike("last_name", lastName)
-    .maybeSingle()
+    .select("id, reference_number, first_name, middle_name, last_name, email")
+    .eq("user_id", user.id)
+    .single()
 
   if (applicantError) {
     throw new Error(applicantError.message)
@@ -105,8 +109,8 @@ export default async function StudentResultPage({
   if (!applicant) {
     return (
       <ResultState
-        title="No matching result found"
-        description="We could not find a published result that matches the information you entered. Please check your reference number and last name, then try again."
+        title="Applicant record not found"
+        description="We could not find your applicant account details. Please contact the testing office for assistance."
       />
     )
   }
@@ -151,13 +155,19 @@ export default async function StudentResultPage({
   const schoolYear = getSingleRelation(result.school_years)
   const schedule = getSingleRelation(result.test_schedules)
 
-  const fullName = [applicant.last_name, applicant.first_name, applicant.middle_name]
+  const fullName = [
+    applicant.last_name,
+    applicant.first_name,
+    applicant.middle_name,
+  ]
     .filter(Boolean)
     .join(", ")
 
   const generatedAt = new Date().toISOString()
   const formattedExamDate = formatDate(schedule?.exam_date)
-  const formattedPublishedAt = result.published_at ? formatDate(result.published_at) : ""
+  const formattedPublishedAt = result.published_at
+    ? formatDate(result.published_at)
+    : ""
   const formattedGeneratedAt = formatDateTime(generatedAt)
   const overallPercentage = Number(result.overall_percentage).toFixed(2)
 

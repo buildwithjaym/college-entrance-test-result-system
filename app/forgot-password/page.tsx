@@ -3,14 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  GraduationCap,
-  FileCheck2,
-  Loader2,
-  Eye,
-  EyeOff,
-} from "lucide-react"
+import { ArrowLeft, KeyRound, Loader2, Mail, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,78 +14,59 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createClient } from "@/lib/supabase/client"
 
-export default function StudentLoginPage() {
+export default function ForgotPasswordPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     const normalizedEmail = email.trim().toLowerCase()
-    const trimmedPassword = password.trim()
 
-    if (!normalizedEmail || !trimmedPassword) {
-      setErrorMessage("Please enter your email and password.")
+    if (!normalizedEmail) {
+      setErrorMessage("Please enter your registered email address.")
       return
     }
 
     setLoading(true)
     setErrorMessage("")
+    setSuccessMessage("")
 
     try {
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password: trimmedPassword,
-        })
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: normalizedEmail }),
+      })
 
-      if (signInError || !signInData.user) {
+      const result = await response.json()
+
+      if (!response.ok) {
         setErrorMessage(
-          "Unable to sign in. Please check your email and password and try again."
+          result?.message ||
+            "Unable to process your request right now. Please try again."
         )
         return
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role, must_change_password")
-        .eq("id", signInData.user.id)
-        .single()
-
-      if (profileError || !profile) {
-        await supabase.auth.signOut()
-        setErrorMessage(
-          "Unable to sign in right now. Please try again or contact the administrator."
-        )
-        return
-      }
-
-      if (profile.role !== "applicant") {
-        await supabase.auth.signOut()
-        setErrorMessage(
-          "Unable to sign in right now. Please try again or contact the administrator."
-        )
-        return
-      }
-
-      if (profile.must_change_password) {
-        router.replace("/change-password")
-        return
-      }
-
-      router.replace("/student/result")
-    } catch {
-      setErrorMessage(
-        "Something went wrong while signing in. Please try again."
+      setSuccessMessage(
+        "If the email is registered, a one-time password has been sent. Redirecting..."
       )
+
+      setTimeout(() => {
+        router.push(
+          `/reset-password?email=${encodeURIComponent(normalizedEmail)}`
+        )
+      }, 1200)
+    } catch {
+      setErrorMessage("Something went wrong. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -107,35 +81,55 @@ export default function StudentLoginPage() {
         <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-2">
           <div className="hidden flex-col justify-center rounded-3xl border border-primary/10 bg-primary/5 p-10 lg:flex">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-              <GraduationCap className="h-8 w-8" />
+              <Mail className="h-8 w-8" />
             </div>
 
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-              Student Result Portal
+              Password Recovery
             </p>
+
             <h1 className="mt-3 text-4xl font-bold leading-tight text-foreground">
-              View your CET result securely and privately online.
+              Reset your student account password securely.
             </h1>
+
             <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
-              Sign in using your registered email and temporary password. On your
-              first login, you will be asked to change your password before you
-              can access your result.
+              Enter your registered email address and we will send a one-time
+              password to help you recover access to your CET Result account.
             </p>
 
             <div className="mt-8 grid gap-4">
               <div className="rounded-2xl border border-primary/10 bg-background/80 p-4 shadow-sm">
-                <p className="font-medium text-foreground">Private access</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Your result is only available after successful account login.
-                </p>
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-xl bg-primary/10 p-2 text-primary">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      Secure verification
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      A one-time password will be sent to your registered email
+                      for password reset verification.
+                    </p>
+                  </div>
+                </div>
               </div>
+
               <div className="rounded-2xl border border-primary/10 bg-background/80 p-4 shadow-sm">
-                <p className="font-medium text-foreground">
-                  First-login protection
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  You must update your password before viewing your result.
-                </p>
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-xl bg-primary/10 p-2 text-primary">
+                    <KeyRound className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      Fast account recovery
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Once verified, you can immediately create a new password
+                      and return to your result portal.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -150,24 +144,24 @@ export default function StudentLoginPage() {
                     size="sm"
                     className="gap-2 rounded-full px-3"
                   >
-                    <Link href="/">
+                    <Link href="/student-login">
                       <ArrowLeft className="h-4 w-4" />
                       Back
                     </Link>
                   </Button>
 
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
-                    <FileCheck2 className="h-5 w-5" />
+                    <KeyRound className="h-5 w-5" />
                   </div>
                 </div>
 
                 <div className="space-y-2 text-center">
                   <CardTitle className="text-3xl font-bold tracking-tight text-primary">
-                    Student Login
+                    Forgot Password
                   </CardTitle>
                   <CardDescription className="text-sm leading-6">
-                    Sign in with your registered email and password to access
-                    your CET result.
+                    Enter your registered email to receive your one-time
+                    password.
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -190,51 +184,15 @@ export default function StudentLoginPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-  <div className="flex items-center justify-between">
-    <Label htmlFor="password" className="text-sm font-medium">
-      Password
-    </Label>
-
-    <Link
-      href="/forgot-password"
-      className="text-sm font-medium text-primary transition hover:underline"
-    >
-      Forgot your password?
-    </Link>
-  </div>
-
-  <div className="relative">
-    <Input
-      id="password"
-      type={showPassword ? "text" : "password"}
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      placeholder="Enter your password"
-      required
-      disabled={loading}
-      className="h-12 rounded-xl border-primary/10 bg-background pr-12 shadow-sm focus-visible:ring-primary"
-    />
-
-    <button
-      type="button"
-      onClick={() => setShowPassword((prev) => !prev)}
-      disabled={loading}
-      className="absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-      aria-label={showPassword ? "Hide password" : "Show password"}
-    >
-      {showPassword ? (
-        <EyeOff className="h-5 w-5" />
-      ) : (
-        <Eye className="h-5 w-5" />
-      )}
-    </button>
-  </div>
-</div>
-
                   {errorMessage ? (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                       {errorMessage}
+                    </div>
+                  ) : null}
+
+                  {successMessage ? (
+                    <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                      {successMessage}
                     </div>
                   ) : null}
 
@@ -246,18 +204,17 @@ export default function StudentLoginPage() {
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
+                        Sending OTP...
                       </>
                     ) : (
-                      "Sign In"
+                      "Send OTP"
                     )}
                   </Button>
                 </form>
 
                 <div className="mt-6 text-center text-xs leading-5 text-muted-foreground">
-                  Use your registered email and your temporary password, which is
-                  your reference number on first login. You will be required to
-                  change it before viewing your result.
+                  For security, we will not confirm whether an email is
+                  registered in the system.
                 </div>
               </CardContent>
             </Card>

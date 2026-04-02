@@ -2,19 +2,22 @@ import { createClient } from "@/lib/supabase/server"
 import { ApplicantsToolbar } from "@/components/admin/applicants-toolbar"
 import { ApplicantsList } from "@/components/admin/applicants-list"
 
+const PAGE_SIZE = 10
+
 export default async function ApplicantsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string }>
+  searchParams?: Promise<{ q?: string; page?: string }>
 }) {
   const params = (await searchParams) || {}
   const query = params.q?.trim() || ""
+  const currentPage = Math.max(Number(params.page || "1"), 1)
 
   const supabase = await createClient()
 
   let request = supabase
     .from("applicants")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
 
   if (query) {
@@ -23,13 +26,17 @@ export default async function ApplicantsPage({
     )
   }
 
-  const { data: applicants, error } = await request
+  const from = (currentPage - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
+  const { data: applicants, error, count } = await request.range(from, to)
 
   if (error) {
     throw new Error(error.message)
   }
 
-  const totalApplicants = applicants?.length ?? 0
+  const totalApplicants = count ?? 0
+  const totalPages = Math.max(Math.ceil(totalApplicants / PAGE_SIZE), 1)
   const latestApplicant = applicants?.[0] ?? null
 
   return (
@@ -44,7 +51,12 @@ export default async function ApplicantsPage({
         query={query}
       />
 
-      <ApplicantsList applicants={applicants ?? []} />
+      <ApplicantsList
+        applicants={applicants ?? []}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        query={query}
+      />
     </div>
   )
 }

@@ -2,10 +2,23 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import * as XLSX from "xlsx"
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim()
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
+}
+
+function buildFullName(firstName: string, middleName: string, lastName: string) {
+  return [firstName, middleName, lastName].filter(Boolean).join(" ")
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
 async function getLatestReferenceBase() {
@@ -34,32 +47,105 @@ async function generateReferenceNumber() {
   return `BASC-${year}-${nextNumber}`
 }
 
+async function ensureUniqueApplicantInputs(
+  email: string,
+  referenceNumber: string,
+  ignoreApplicantId?: string
+) {
+  const supabase = await createClient()
+
+  let emailQuery = supabase
+    .from("applicants")
+    .select("id")
+    .eq("email", email)
+    .limit(1)
+
+  let refQuery = supabase
+    .from("applicants")
+    .select("id")
+    .eq("reference_number", referenceNumber)
+    .limit(1)
+
+  if (ignoreApplicantId) {
+    emailQuery = emailQuery.neq("id", ignoreApplicantId)
+    refQuery = refQuery.neq("id", ignoreApplicantId)
+  }
+
+  const [{ data: emailMatch, error: emailError }, { data: refMatch, error: refError }] =
+    await Promise.all([emailQuery, refQuery])
+
+  if (emailError) throw new Error(emailError.message)
+  if (refError) throw new Error(refError.message)
+
+  if (emailMatch?.length) {
+    throw new Error("Email is already assigned to another applicant.")
+  }
+
+  if (refMatch?.length) {
+    throw new Error("Reference number already exists.")
+  }
+}
+
 export async function createApplicant(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   let referenceNumber = clean(formData.get("reference_number"))
   const firstName = clean(formData.get("first_name"))
   const middleName = clean(formData.get("middle_name"))
   const lastName = clean(formData.get("last_name"))
-  const email = clean(formData.get("email"))
+  const email = normalizeEmail(clean(formData.get("email")))
 
   if (!firstName) throw new Error("First name is required.")
   if (!lastName) throw new Error("Last name is required.")
+  if (!email) throw new Error("Email is required.")
+  if (!isValidEmail(email)) throw new Error("Please enter a valid email address.")
 
   if (!referenceNumber) {
     referenceNumber = await generateReferenceNumber()
   }
 
-  const { error } = await supabase.from("applicants").insert({
+  await ensureUniqueApplicantInputs(email, referenceNumber)
+
+  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+    email,
+    password: referenceNumber,
+    email_confirm: true,
+  })
+
+  if (authError || !authData.user) {
+    throw new Error(authError?.message || "Failed to create authentication user.")
+  }
+
+  const userId = authData.user.id
+  const fullName = buildFullName(firstName, middleName, lastName)
+
+  const { error: profileError } = await supabase.from("profiles").insert({
+    id: userId,
+    email,
+    full_name: fullName,
+    role: "applicant",
+    must_change_password: true,
+  })
+
+  if (profileError) {
+    await admin.auth.admin.deleteUser(userId)
+    throw new Error(profileError.message)
+  }
+
+  const { error: applicantError } = await supabase.from("applicants").insert({
+    user_id: userId,
     reference_number: referenceNumber,
     first_name: firstName,
     middle_name: middleName || null,
     last_name: lastName,
-    email: email || null,
+    email,
   })
 
-  if (error) {
-    throw new Error(error.message)
+  if (applicantError) {
+    await supabase.from("profiles").delete().eq("id", userId)
+    await admin.auth.admin.deleteUser(userId)
+    throw new Error(applicantError.message)
   }
 
   revalidatePath("/admin/applicants")
@@ -68,32 +154,74 @@ export async function createApplicant(formData: FormData) {
 
 export async function updateApplicant(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = clean(formData.get("id"))
   const referenceNumber = clean(formData.get("reference_number"))
   const firstName = clean(formData.get("first_name"))
   const middleName = clean(formData.get("middle_name"))
   const lastName = clean(formData.get("last_name"))
-  const email = clean(formData.get("email"))
+  const email = normalizeEmail(clean(formData.get("email")))
 
   if (!id) throw new Error("Applicant ID is required.")
   if (!referenceNumber) throw new Error("Reference number is required.")
   if (!firstName) throw new Error("First name is required.")
   if (!lastName) throw new Error("Last name is required.")
+  if (!email) throw new Error("Email is required.")
+  if (!isValidEmail(email)) throw new Error("Please enter a valid email address.")
 
-  const { error } = await supabase
+  await ensureUniqueApplicantInputs(email, referenceNumber, id)
+
+  const { data: applicant, error: fetchError } = await supabase
+    .from("applicants")
+    .select("id, user_id")
+    .eq("id", id)
+    .single()
+
+  if (fetchError || !applicant) {
+    throw new Error(fetchError?.message || "Applicant not found.")
+  }
+
+  const fullName = buildFullName(firstName, middleName, lastName)
+
+  const { error: applicantError } = await supabase
     .from("applicants")
     .update({
       reference_number: referenceNumber,
       first_name: firstName,
       middle_name: middleName || null,
       last_name: lastName,
-      email: email || null,
+      email,
     })
     .eq("id", id)
 
-  if (error) {
-    throw new Error(error.message)
+  if (applicantError) {
+    throw new Error(applicantError.message)
+  }
+
+  if (applicant.user_id) {
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        email,
+        full_name: fullName,
+      })
+      .eq("id", applicant.user_id)
+
+    if (profileError) {
+      throw new Error(profileError.message)
+    }
+
+    const { error: authUpdateError } = await admin.auth.admin.updateUserById(
+      applicant.user_id,
+      {
+        email,
+      }
+    )
+
+    if (authUpdateError) {
+      throw new Error(authUpdateError.message)
+    }
   }
 
   revalidatePath("/admin/applicants")
@@ -102,14 +230,38 @@ export async function updateApplicant(formData: FormData) {
 
 export async function deleteApplicant(formData: FormData) {
   const supabase = await createClient()
+  const admin = createAdminClient()
 
   const id = clean(formData.get("id"))
   if (!id) throw new Error("Applicant ID is required.")
 
-  const { error } = await supabase.from("applicants").delete().eq("id", id)
+  const { data: applicant, error: fetchError } = await supabase
+    .from("applicants")
+    .select("id, user_id")
+    .eq("id", id)
+    .single()
 
-  if (error) {
-    throw new Error(error.message)
+  if (fetchError || !applicant) {
+    throw new Error(fetchError?.message || "Applicant not found.")
+  }
+
+  const { error: deleteApplicantError } = await supabase
+    .from("applicants")
+    .delete()
+    .eq("id", id)
+
+  if (deleteApplicantError) {
+    throw new Error(deleteApplicantError.message)
+  }
+
+  if (applicant.user_id) {
+    const { error: authDeleteError } = await admin.auth.admin.deleteUser(
+      applicant.user_id
+    )
+
+    if (authDeleteError) {
+      throw new Error(authDeleteError.message)
+    }
   }
 
   revalidatePath("/admin/applicants")
@@ -117,8 +269,6 @@ export async function deleteApplicant(formData: FormData) {
 }
 
 export async function bulkImportApplicants(formData: FormData) {
-  const supabase = await createClient()
-
   const rowsRaw = clean(formData.get("rows_json"))
   if (!rowsRaw) {
     throw new Error("No preview rows were submitted.")
@@ -142,33 +292,36 @@ export async function bulkImportApplicants(formData: FormData) {
     throw new Error("No valid applicant rows were found.")
   }
 
-  const year = new Date().getFullYear()
-  const latestGeneratedBase = await getLatestReferenceBase()
-  let generatedCounter = 0
+  for (const row of rows) {
+    const firstName = String(row.first_name || "").trim()
+    const lastName = String(row.last_name || "").trim()
+    const email = normalizeEmail(String(row.email || "").trim())
 
-  const payload = rows.map((row) => {
-    let referenceNumber = String(row.reference_number || "").trim()
-
-    if (!referenceNumber) {
-      generatedCounter += 1
-      referenceNumber = `BASC-${year}-${String(
-        latestGeneratedBase + generatedCounter
-      ).padStart(6, "0")}`
+    if (!firstName) throw new Error("Each imported row must have a first name.")
+    if (!lastName) throw new Error("Each imported row must have a last name.")
+    if (!email) throw new Error("Each imported row must have an email.")
+    if (!isValidEmail(email)) {
+      throw new Error(`Invalid email found in import: ${email}`)
     }
+  }
 
-    return {
-      reference_number: referenceNumber,
-      first_name: String(row.first_name || "").trim(),
-      middle_name: String(row.middle_name || "").trim() || null,
-      last_name: String(row.last_name || "").trim(),
-      email: String(row.email || "").trim() || null,
+  for (const row of rows) {
+    const rowEmail = normalizeEmail(String(row.email || "").trim())
+    const rowRef = String(row.reference_number || "").trim()
+
+    if (rowRef) {
+      await ensureUniqueApplicantInputs(rowEmail, rowRef)
     }
-  })
+  }
 
-  const { error } = await supabase.from("applicants").insert(payload)
-
-  if (error) {
-    throw new Error(error.message)
+  for (const row of rows) {
+    const form = new FormData()
+    form.set("reference_number", String(row.reference_number || "").trim())
+    form.set("first_name", String(row.first_name || "").trim())
+    form.set("middle_name", String(row.middle_name || "").trim())
+    form.set("last_name", String(row.last_name || "").trim())
+    form.set("email", normalizeEmail(String(row.email || "").trim()))
+    await createApplicant(form)
   }
 
   revalidatePath("/admin/applicants")
@@ -211,7 +364,7 @@ export async function parseApplicantsExcel(formData: FormData) {
       const firstName = String(row.first_name ?? row["First Name"] ?? "").trim()
       const middleName = String(row.middle_name ?? row["Middle Name"] ?? "").trim()
       const lastName = String(row.last_name ?? row["Last Name"] ?? "").trim()
-      const email = String(row.email ?? row["Email"] ?? "").trim()
+      const email = normalizeEmail(String(row.email ?? row["Email"] ?? "").trim())
       const referenceNumber = String(
         row.reference_number ?? row["Reference Number"] ?? ""
       ).trim()
@@ -220,6 +373,8 @@ export async function parseApplicantsExcel(formData: FormData) {
 
       if (!firstName) errors.push("Missing first name")
       if (!lastName) errors.push("Missing last name")
+      if (!email) errors.push("Missing email")
+      if (email && !isValidEmail(email)) errors.push("Invalid email")
 
       return {
         row_number: index + 2,

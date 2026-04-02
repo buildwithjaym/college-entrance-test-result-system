@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import {
   Download,
   Eye,
@@ -45,6 +46,7 @@ export function ApplicantsToolbar({
   latestApplicantName: string
   query: string
 }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([])
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -104,9 +106,7 @@ export function ApplicantsToolbar({
   }
 
   const handleFileChange = (file: File | null) => {
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     const toastId = showLoading("Reading Excel file...")
 
@@ -192,12 +192,18 @@ export function ApplicantsToolbar({
   }
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    if (!searchValue.trim()) {
+    event.preventDefault()
+
+    const trimmed = searchValue.trim()
+
+    if (!trimmed) {
+      router.push("/admin/applicants")
       showInfo("Showing all applicants.")
       return
     }
 
-    showSuccess(`Searching for "${searchValue.trim()}".`)
+    router.push(`/admin/applicants?q=${encodeURIComponent(trimmed)}&page=1`)
+    showSuccess(`Searching for "${trimmed}".`)
   }
 
   return (
@@ -366,27 +372,13 @@ export function ApplicantsToolbar({
                   <table className="w-full min-w-[900px] text-left">
                     <thead>
                       <tr className="border-b border-slate-200">
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          Row
-                        </th>
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          Reference Number
-                        </th>
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          First Name
-                        </th>
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          Middle Name
-                        </th>
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          Last Name
-                        </th>
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          Email
-                        </th>
-                        <th className="pb-3 text-sm font-semibold text-slate-500">
-                          Status
-                        </th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">Row</th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">Reference Number</th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">First Name</th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">Middle Name</th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">Last Name</th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">Email</th>
+                        <th className="pb-3 text-sm font-semibold text-slate-500">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -395,24 +387,14 @@ export function ApplicantsToolbar({
                           key={row.row_number}
                           className="border-b border-slate-100 last:border-b-0"
                         >
-                          <td className="py-3 text-sm text-slate-700">
-                            {row.row_number}
-                          </td>
+                          <td className="py-3 text-sm text-slate-700">{row.row_number}</td>
                           <td className="py-3 text-sm text-slate-700">
                             {row.reference_number || "Auto-generate"}
                           </td>
-                          <td className="py-3 text-sm text-slate-700">
-                            {row.first_name || "—"}
-                          </td>
-                          <td className="py-3 text-sm text-slate-700">
-                            {row.middle_name || "—"}
-                          </td>
-                          <td className="py-3 text-sm text-slate-700">
-                            {row.last_name || "—"}
-                          </td>
-                          <td className="py-3 text-sm text-slate-700">
-                            {row.email || "—"}
-                          </td>
+                          <td className="py-3 text-sm text-slate-700">{row.first_name || "—"}</td>
+                          <td className="py-3 text-sm text-slate-700">{row.middle_name || "—"}</td>
+                          <td className="py-3 text-sm text-slate-700">{row.last_name || "—"}</td>
+                          <td className="py-3 text-sm text-slate-700">{row.email || "—"}</td>
                           <td className="py-3 text-sm">
                             {row.valid ? (
                               <span className="rounded-full bg-green-100 px-3 py-1 font-medium text-green-700">
