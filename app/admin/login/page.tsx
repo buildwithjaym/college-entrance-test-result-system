@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
             <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
               Manage school years, exam schedules, student records, results,
               publishing, and analytics inside a modern result management
-              platform for Basilan State College.
+              platform for SUC's.
             </p>
 
             <div className="mt-8 grid gap-4">
@@ -107,7 +107,7 @@ export default function AdminLoginPage() {
                     Admin Login
                   </CardTitle>
                   <CardDescription className="text-sm leading-6">
-                    Sign in to access the Basilan State College CET Result System
+                    Sign in to access the CET Result System
                     administration panel.
                   </CardDescription>
                 </div>

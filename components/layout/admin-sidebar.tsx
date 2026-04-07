@@ -79,7 +79,7 @@ export function AdminSidebar() {
           <Link href="/admin/dashboard" className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white ring-1 ring-gray-200">
               <Image
-                src="/testing.png"
+                src="/new.png"
                 alt="Logo"
                 width={36}
                 height={36}

@@ -20,8 +20,8 @@ export default function HomePage() {
 
         <div className="mb-8 mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-white shadow-xl ring-1 ring-primary/10 md:h-36 md:w-36">
           <Image
-            src="/logo.png"
-            alt="Basilan State College logo"
+            src="/logos.png"
+            alt="Our logo"
             width={120}
             height={120}
             className="h-auto w-auto object-contain"
@@ -30,11 +30,11 @@ export default function HomePage() {
         </div>
 
         <h1 className="text-4xl font-bold tracking-tight text-primary md:text-5xl lg:text-6xl">
-          Basilan State College
+          College Entrance Test Result System
         </h1>
 
         <p className="mt-3 text-lg font-semibold tracking-wide text-foreground md:text-xl">
-          College Entrance Test Result System
+          Developed by Jaymar Maruji
         </p>
 
         <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base mx-auto">
