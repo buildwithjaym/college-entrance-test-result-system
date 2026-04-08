@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Toaster } from "sonner"
 import "./globals.css"
 
-const siteName = "Basilan State College CET Result System"
+const siteName = "College Entrance Test Result System"
 const siteDescription =
   "Official College Entrance Test result access, program recommendations, and school-year-based result distribution for Basilan State College."
 
@@ -40,10 +40,10 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: [
       {
-        url: "/logo.jpg",
+        url: "/new.png",
         width: 1200,
         height: 630,
-        alt: "Basilan State College CET Result System",
+        alt: "CET Result System",
       },
     ],
   },
@@ -51,16 +51,16 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: siteName,
     description: siteDescription,
-    images: ["/logo.jpg"],
+    images: ["/new.png"],
   },
   robots: {
     index: true,
     follow: true,
   },
   icons: {
-    icon: "/logo.jpg",
-    shortcut: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: "/new.png",
+    shortcut: "/new.png",
+    apple: "/new.png",
   },
 }
 
