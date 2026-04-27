@@ -28,6 +28,7 @@ const navSections = [
     items: [
       { label: "Applicants", href: "/admin/applicants", icon: Users },
       { label: "Publish Results", href: "/admin/publish-results", icon: ClipboardList },
+      { label: "View Results", href: "/admin/results", icon: FileCheck2 },
     ],
   },
   {
