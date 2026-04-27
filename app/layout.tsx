@@ -22,7 +22,6 @@ export const metadata: Metadata = {
   },
 
   description: siteDescription,
-
   applicationName: siteName,
 
   keywords: [
@@ -44,7 +43,6 @@ export const metadata: Metadata = {
   authors: [{ name: "Jaymar Maruji" }],
   creator: "Jaymar Maruji",
   publisher: "Jaymar Maruji",
-
   category: "education",
 
   alternates: {
@@ -121,32 +119,43 @@ export default function RootLayout({
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(185,28,28,0.12),transparent_32%)]"
           />
+
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_bottom_right,rgba(185,28,28,0.04),transparent_45%,rgba(185,28,28,0.06))]"
           />
 
           {children}
-
-          <Toaster
-            position="top-right"
-            richColors
-            closeButton
-            duration={3200}
-            toastOptions={{
-              classNames: {
-                toast:
-                  "rounded-2xl border border-border/60 bg-background/95 shadow-lg backdrop-blur",
-                title: "text-sm font-semibold",
-                description: "text-sm text-muted-foreground",
-                actionButton:
-                  "rounded-xl bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800",
-                cancelButton:
-                  "rounded-xl bg-muted px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/80",
-              },
-            }}
-          />
         </div>
+
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          expand
+          visibleToasts={4}
+          duration={3200}
+          toastOptions={{
+            classNames: {
+              toast:
+                "rounded-2xl border border-gray-200 bg-white shadow-xl backdrop-blur-md",
+              title: "text-sm font-semibold text-gray-950",
+              description: "text-sm text-gray-500",
+              actionButton:
+                "rounded-xl bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800",
+              cancelButton:
+                "rounded-xl bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200",
+              success:
+                "border-green-200 bg-green-50 text-green-900",
+              error:
+                "border-red-200 bg-red-50 text-red-900",
+              warning:
+                "border-amber-200 bg-amber-50 text-amber-900",
+              info:
+                "border-blue-200 bg-blue-50 text-blue-900",
+            },
+          }}
+        />
       </body>
     </html>
   )
