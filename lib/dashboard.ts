@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 
 export type DashboardStat = {
@@ -24,43 +25,54 @@ export type RecentResultItem = {
   examDate: string | null
 }
 
-export async function getDashboardStats(): Promise<DashboardStat> {
+export const getDashboardStats = cache(async (): Promise<DashboardStat> => {
   const supabase = await createClient()
 
-  const { data: activeSchoolYear } = await supabase
-    .from("school_years")
-    .select("label")
-    .eq("is_active", true)
-    .maybeSingle()
+  const [
+    activeSchoolYearRes,
+    totalApplicantsRes,
+    totalResultsRes,
+    publishedResultsRes,
+    unpublishedResultsRes,
+    averageRowsRes,
+  ] = await Promise.all([
+    supabase
+      .from("school_years")
+      .select("label")
+      .eq("is_active", true)
+      .maybeSingle(),
 
-  const { count: totalApplicants } = await supabase
-    .from("applicants")
-    .select("*", { count: "exact", head: true })
+    supabase
+      .from("applicants")
+      .select("*", { count: "exact", head: true }),
 
-  const { count: totalResults } = await supabase
-    .from("results")
-    .select("*", { count: "exact", head: true })
+    supabase
+      .from("results")
+      .select("*", { count: "exact", head: true }),
 
-  const { count: publishedResults } = await supabase
-    .from("results")
-    .select("*", { count: "exact", head: true })
-    .eq("is_published", true)
+    supabase
+      .from("results")
+      .select("*", { count: "exact", head: true })
+      .eq("is_published", true),
 
-  const { count: unpublishedResults } = await supabase
-    .from("results")
-    .select("*", { count: "exact", head: true })
-    .eq("is_published", false)
+    supabase
+      .from("results")
+      .select("*", { count: "exact", head: true })
+      .eq("is_published", false),
 
-  const { data: averageRows } = await supabase
-    .from("results")
-    .select("overall_percentage")
+    supabase
+      .from("results")
+      .select("overall_percentage"),
+  ])
+
+  const averageRows = averageRowsRes.data ?? []
 
   const averageOverallPercentage =
-    averageRows && averageRows.length > 0
+    averageRows.length > 0
       ? Number(
           (
             averageRows.reduce(
-              (sum, row) => sum + Number(row.overall_percentage),
+              (sum, row) => sum + Number(row.overall_percentage ?? 0),
               0
             ) / averageRows.length
           ).toFixed(2)
@@ -68,16 +80,16 @@ export async function getDashboardStats(): Promise<DashboardStat> {
       : 0
 
   return {
-    activeSchoolYear: activeSchoolYear?.label ?? null,
-    totalApplicants: totalApplicants ?? 0,
-    totalResults: totalResults ?? 0,
-    publishedResults: publishedResults ?? 0,
-    unpublishedResults: unpublishedResults ?? 0,
+    activeSchoolYear: activeSchoolYearRes.data?.label ?? null,
+    totalApplicants: totalApplicantsRes.count ?? 0,
+    totalResults: totalResultsRes.count ?? 0,
+    publishedResults: publishedResultsRes.count ?? 0,
+    unpublishedResults: unpublishedResultsRes.count ?? 0,
     averageOverallPercentage,
   }
-}
+})
 
-export async function getResultTrends(): Promise<ResultTrendItem[]> {
+export const getResultTrends = cache(async (): Promise<ResultTrendItem[]> => {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -123,9 +135,9 @@ export async function getResultTrends(): Promise<ResultTrendItem[]> {
       average: Number((value.total / value.count).toFixed(2)),
     }))
     .slice(-6)
-}
+})
 
-export async function getRecentResults(): Promise<RecentResultItem[]> {
+export const getRecentResults = cache(async (): Promise<RecentResultItem[]> => {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -175,4 +187,4 @@ export async function getRecentResults(): Promise<RecentResultItem[]> {
       examDate: schedule?.exam_date ?? null,
     }
   })
-}
+})
