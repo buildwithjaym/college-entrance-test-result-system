@@ -35,6 +35,7 @@ export async function getReportsData() {
       .from("school_years")
       .select("id, label, is_active")
       .order("created_at", { ascending: false }),
+
     supabase
       .from("results")
       .select(
@@ -73,11 +74,13 @@ export async function getReportsData() {
     throw new Error(resultsError.message)
   }
 
-  const safeSchoolYears: SchoolYearOption[] = (schoolYears ?? []).map((item) => ({
-    id: Number(item.id),
-    label: String(item.label),
-    is_active: Boolean(item.is_active),
-  }))
+  const safeSchoolYears: SchoolYearOption[] = (schoolYears ?? []).map(
+    (item) => ({
+      id: Number(item.id),
+      label: String(item.label),
+      is_active: Boolean(item.is_active),
+    })
+  )
 
   const rows: ReportRow[] = (results ?? []).flatMap((item) => {
     const applicant = Array.isArray(item.applicants)
