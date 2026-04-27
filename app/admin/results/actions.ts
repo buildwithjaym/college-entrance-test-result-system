@@ -5,58 +5,86 @@ import { createClient } from "@/lib/supabase/server"
 
 const PAGE_SIZE = 10
 
-function normalizePage(value: string | null | undefined) {
+export type ResultsSort =
+  | "newest"
+  | "oldest"
+  | "score_high"
+  | "score_low"
+  | "published_first"
+  | "pending_first"
+
+export type ResultsStatus = "all" | "published" | "pending"
+
+type ActionResult = {
+  ok: boolean
+  message: string
+}
+
+function normalizePage(value: string | number | null | undefined) {
   const page = Number(value ?? 1)
+  return Number.isFinite(page) && page > 0 ? page : 1
+}
 
-  if (!Number.isFinite(page) || page < 1) {
-    return 1
-  }
+function normalizeSort(value: string | null | undefined): ResultsSort {
+  const allowed: ResultsSort[] = [
+    "newest",
+    "oldest",
+    "score_high",
+    "score_low",
+    "published_first",
+    "pending_first",
+  ]
 
-  return page
+  return allowed.includes(value as ResultsSort)
+    ? (value as ResultsSort)
+    : "newest"
+}
+
+function normalizeStatus(value: string | null | undefined): ResultsStatus {
+  const allowed: ResultsStatus[] = ["all", "published", "pending"]
+
+  return allowed.includes(value as ResultsStatus)
+    ? (value as ResultsStatus)
+    : "all"
 }
 
 export async function getResultsStats() {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from("results")
-    .select("id, is_published, overall_percentage")
+  const { data, error } = await supabase.rpc("get_dashboard_stats")
 
   if (error) {
-    throw new Error(error.message)
+    console.error("getResultsStats error:", error.message)
+
+    return {
+      totalResults: 0,
+      publishedResults: 0,
+      pendingResults: 0,
+      averageScore: 0,
+    }
   }
 
-  const rows = data ?? []
-  const totalResults = rows.length
-  const publishedResults = rows.filter((item) => Boolean(item.is_published)).length
-  const pendingResults = totalResults - publishedResults
-
-  const averageScore =
-    totalResults > 0
-      ? Math.round(
-          rows.reduce(
-            (sum, item) => sum + Number(item.overall_percentage ?? 0),
-            0
-          ) / totalResults
-        )
-      : 0
-
   return {
-    totalResults,
-    publishedResults,
-    pendingResults,
-    averageScore,
+    totalResults: Number(data?.totalResults ?? 0),
+    publishedResults: Number(data?.publishedResults ?? 0),
+    pendingResults: Number(data?.pendingResults ?? 0),
+    averageScore: Number(data?.averageScore ?? 0),
   }
 }
 
 export async function getResultsPage(params: {
   query?: string
   page?: string | number
+  sort?: string
+  status?: string
 }) {
   const supabase = await createClient()
 
   const query = String(params.query ?? "").trim()
-  const page = normalizePage(String(params.page ?? 1))
+  const page = normalizePage(params.page)
+  const sort = normalizeSort(params.sort)
+  const status = normalizeStatus(params.status)
+
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
@@ -64,10 +92,7 @@ export async function getResultsPage(params: {
   let scheduleIds: number[] = []
 
   if (query) {
-    const [
-      { data: applicantMatches, error: applicantError },
-      { data: scheduleMatches, error: scheduleError },
-    ] = await Promise.all([
+    const [applicantResult, scheduleResult] = await Promise.all([
       supabase
         .from("applicants")
         .select("id")
@@ -80,24 +105,25 @@ export async function getResultsPage(params: {
             `email.ilike.%${query}%`,
           ].join(",")
         )
-        .limit(200),
+        .limit(100),
+
       supabase
         .from("test_schedules")
         .select("id")
         .ilike("name", `%${query}%`)
-        .limit(200),
+        .limit(100),
     ])
 
-    if (applicantError) {
-      throw new Error(applicantError.message)
+    if (applicantResult.error) {
+      throw new Error(applicantResult.error.message)
     }
 
-    if (scheduleError) {
-      throw new Error(scheduleError.message)
+    if (scheduleResult.error) {
+      throw new Error(scheduleResult.error.message)
     }
 
-    applicantIds = (applicantMatches ?? []).map((item) => Number(item.id))
-    scheduleIds = (scheduleMatches ?? []).map((item) => Number(item.id))
+    applicantIds = (applicantResult.data ?? []).map((item) => Number(item.id))
+    scheduleIds = (scheduleResult.data ?? []).map((item) => Number(item.id))
 
     if (applicantIds.length === 0 && scheduleIds.length === 0) {
       return {
@@ -107,6 +133,8 @@ export async function getResultsPage(params: {
         pageSize: PAGE_SIZE,
         totalPages: 1,
         query,
+        sort,
+        status,
       }
     }
   }
@@ -115,114 +143,168 @@ export async function getResultsPage(params: {
     .from("results")
     .select("id", { count: "exact", head: true })
 
-  let dataQuery = supabase
-    .from("results")
-    .select(
-      `
-        id,
-        overall_percentage,
-        is_published,
-        created_at,
-        applicants (
-          id,
-          reference_number,
-          first_name,
-          middle_name,
-          last_name,
-          email
-        ),
-        test_schedules (
-          id,
-          name,
-          exam_date
-        )
-      `
+  let dataQuery = supabase.from("results").select(`
+    id,
+    overall_percentage,
+    is_published,
+    created_at,
+    applicants (
+      id,
+      reference_number,
+      first_name,
+      middle_name,
+      last_name,
+      email
+    ),
+    test_schedules (
+      id,
+      name,
+      exam_date
     )
-    .order("created_at", { ascending: false })
+  `)
+
+  if (status === "published") {
+    countQuery = countQuery.eq("is_published", true)
+    dataQuery = dataQuery.eq("is_published", true)
+  }
+
+  if (status === "pending") {
+    countQuery = countQuery.eq("is_published", false)
+    dataQuery = dataQuery.eq("is_published", false)
+  }
 
   if (query) {
-    const hasApplicantIds = applicantIds.length > 0
-    const hasScheduleIds = scheduleIds.length > 0
+    if (applicantIds.length > 0 && scheduleIds.length > 0) {
+      const filter = `applicant_id.in.(${applicantIds.join(
+        ","
+      )}),test_schedule_id.in.(${scheduleIds.join(",")})`
 
-    if (hasApplicantIds && hasScheduleIds) {
-      const filter = `applicant_id.in.(${applicantIds.join(",")}),test_schedule_id.in.(${scheduleIds.join(",")})`
       countQuery = countQuery.or(filter)
       dataQuery = dataQuery.or(filter)
-    } else if (hasApplicantIds) {
+    } else if (applicantIds.length > 0) {
       countQuery = countQuery.in("applicant_id", applicantIds)
       dataQuery = dataQuery.in("applicant_id", applicantIds)
-    } else if (hasScheduleIds) {
+    } else if (scheduleIds.length > 0) {
       countQuery = countQuery.in("test_schedule_id", scheduleIds)
       dataQuery = dataQuery.in("test_schedule_id", scheduleIds)
     }
   }
 
-  const [{ count, error: countError }, { data, error }] = await Promise.all([
+  if (sort === "newest") {
+    dataQuery = dataQuery.order("created_at", { ascending: false })
+  }
+
+  if (sort === "oldest") {
+    dataQuery = dataQuery.order("created_at", { ascending: true })
+  }
+
+  if (sort === "score_high") {
+    dataQuery = dataQuery.order("overall_percentage", { ascending: false })
+  }
+
+  if (sort === "score_low") {
+    dataQuery = dataQuery.order("overall_percentage", { ascending: true })
+  }
+
+  if (sort === "published_first") {
+    dataQuery = dataQuery.order("is_published", { ascending: false })
+  }
+
+  if (sort === "pending_first") {
+    dataQuery = dataQuery.order("is_published", { ascending: true })
+  }
+
+  const [countResult, dataResult] = await Promise.all([
     countQuery,
     dataQuery.range(from, to),
   ])
 
-  if (countError) {
-    throw new Error(countError.message)
+  if (countResult.error) {
+    throw new Error(countResult.error.message)
   }
 
-  if (error) {
-    throw new Error(error.message)
+  if (dataResult.error) {
+    throw new Error(dataResult.error.message)
   }
+
+  const total = countResult.count ?? 0
 
   return {
-    rows: data ?? [],
-    total: count ?? 0,
+    rows: dataResult.data ?? [],
+    total,
     page,
     pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
+    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
     query,
+    sort,
+    status,
   }
 }
 
-export async function toggleResultPublish(formData: FormData): Promise<void> {
+export async function toggleResultPublish(
+  formData: FormData
+): Promise<ActionResult> {
   const supabase = await createClient()
 
   const id = Number(formData.get("id"))
   const nextValue = String(formData.get("next_value")) === "true"
 
   if (!id) {
-    throw new Error("Result ID is required.")
+    return {
+      ok: false,
+      message: "Result ID is required.",
+    }
   }
 
   const { error } = await supabase
     .from("results")
-    .update({
-      is_published: nextValue,
-    })
+    .update({ is_published: nextValue })
     .eq("id", id)
 
   if (error) {
-    throw new Error(error.message)
+    return {
+      ok: false,
+      message: error.message,
+    }
   }
 
   revalidatePath("/admin/results")
   revalidatePath("/admin/dashboard")
+
+  return {
+    ok: true,
+    message: nextValue
+      ? "Result released successfully."
+      : "Result hidden successfully.",
+  }
 }
 
-export async function deleteResult(formData: FormData): Promise<void> {
+export async function deleteResult(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient()
 
   const id = Number(formData.get("id"))
 
   if (!id) {
-    throw new Error("Result ID is required.")
+    return {
+      ok: false,
+      message: "Result ID is required.",
+    }
   }
 
-  const { error } = await supabase
-    .from("results")
-    .delete()
-    .eq("id", id)
+  const { error } = await supabase.from("results").delete().eq("id", id)
 
   if (error) {
-    throw new Error(error.message)
+    return {
+      ok: false,
+      message: error.message,
+    }
   }
 
   revalidatePath("/admin/results")
   revalidatePath("/admin/dashboard")
+
+  return {
+    ok: true,
+    message: "Result deleted successfully.",
+  }
 }

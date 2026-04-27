@@ -77,3 +77,47 @@ create trigger trg_results_updated_at
 before update on results
 for each row
 execute function set_updated_at();
+
+-- RESULTS TABLE
+create index if not exists idx_results_created_at
+on results (created_at desc);
+
+create index if not exists idx_results_is_published
+on results (is_published);
+
+create index if not exists idx_results_applicant_id
+on results (applicant_id);
+
+create index if not exists idx_results_test_schedule_id
+on results (test_schedule_id);
+
+-- APPLICANTS SEARCH OPTIMIZATION
+create index if not exists idx_applicants_reference_number
+on applicants (reference_number);
+
+create index if not exists idx_applicants_email
+on applicants (email);
+
+-- FULL NAME SEARCH (IMPORTANT)
+create index if not exists idx_applicants_name_search
+on applicants using gin (
+  to_tsvector('simple',
+    coalesce(first_name,'') || ' ' ||
+    coalesce(middle_name,'') || ' ' ||
+    coalesce(last_name,'')
+  )
+);
+
+-- TEST SCHEDULES SEARCH
+create index if not exists idx_test_schedules_name
+on test_schedules (name);
+
+
+create index if not exists idx_results_overall_percentage
+on results (overall_percentage);
+
+create index if not exists idx_results_published_created_at
+on results (is_published, created_at desc);
+
+create index if not exists idx_results_published_percentage
+on results (is_published, overall_percentage desc);
