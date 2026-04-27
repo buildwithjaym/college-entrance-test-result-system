@@ -1,14 +1,12 @@
+import Link from "next/link"
 import {
-  Users,
-  FileCheck2,
-  ClipboardList,
+  AlertTriangle,
+  BarChart3,
   CheckCircle2,
-  ArrowUpRight,
-  Clock3,
-  School,
-  Sparkles,
+  ClipboardList,
+  FileCheck2,
+  Users,
 } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 
 import {
   getDashboardStats,
@@ -17,281 +15,37 @@ import {
 } from "@/lib/dashboard"
 import { DashboardCharts } from "./_components/dashboard-charts"
 
-type RawDashboardStats = Awaited<ReturnType<typeof getDashboardStats>>
-
-type DashboardStats = {
-  totalApplicants: number
-  totalResults: number
-  publishedResults: number
-  unpublishedResults: number
-}
-type TrendItem = Awaited<ReturnType<typeof getResultTrends>>[number]
-type RecentResultItem = Awaited<ReturnType<typeof getRecentResults>>[number]
-
-type StatCardTone = "red" | "green" | "amber" | "blue"
-
-type StatCardProps = {
-  title: string
-  value: string | number
-  subtitle?: string
-  icon: LucideIcon
-  tone?: StatCardTone
-}
-
-type PublishingStatusProps = {
-  total: number
-  published: number
-  pending: number
-}
-
-type RecentResultsProps = {
-  data: RecentResultItem[]
-}
-
-type QuickInsightsProps = {
-  stats: DashboardStats
-  trends: TrendItem[]
-}
-
-const toneStyles: Record<StatCardTone, string> = {
-  red: "border-red-100 bg-red-50 text-red-600",
-  green: "border-green-100 bg-green-50 text-green-600",
-  amber: "border-amber-100 bg-amber-50 text-amber-600",
-  blue: "border-blue-100 bg-blue-50 text-blue-600",
-}
-
-function formatValue(value: string | number): string | number {
-  if (typeof value === "number") {
-    return value.toLocaleString()
-  }
-
-  return value
+function formatNumber(value: number) {
+  return value.toLocaleString("en-PH")
 }
 
 function StatCard({
   title,
   value,
-  subtitle,
+  description,
   icon: Icon,
-  tone = "red",
-}: StatCardProps) {
+}: {
+  title: string
+  value: number | string
+  description: string
+  icon: React.ElementType
+}) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6">
+    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div>
           <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="mt-2 truncate text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-            {formatValue(value)}
-          </p>
-          {subtitle ? (
-            <p className="mt-2 text-xs text-gray-500">{subtitle}</p>
-          ) : null}
+          <h3 className="mt-2 text-2xl font-bold text-gray-950 sm:text-3xl">
+            {typeof value === "number" ? formatNumber(value) : value}
+          </h3>
+          <p className="mt-2 text-xs text-gray-500">{description}</p>
         </div>
 
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${toneStyles[tone]}`}
-        >
+        <div className="rounded-2xl bg-red-50 p-3 text-red-700 ring-1 ring-red-100">
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </section>
-  )
-}
-
-function PublishingStatus({
-  total,
-  published,
-  pending,
-}: PublishingStatusProps) {
-  const percent = total > 0 ? Math.round((published / total) * 100) : 0
-
-  return (
-    <section className="overflow-hidden rounded-[30px] border border-red-100 bg-gradient-to-br from-white via-white to-red-50 p-5 shadow-sm sm:p-6 xl:p-7">
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 ring-1 ring-red-100">
-            <Sparkles className="h-3.5 w-3.5" />
-            Live publication overview
-          </div>
-
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-            {percent}% of results are already published
-          </h2>
-
-          <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600">
-            Give admins an immediate summary of released results, pending
-            records, and overall publication progress at a glance.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:min-w-[420px]">
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 text-center">
-            <p className="text-xs font-medium text-gray-500">Total</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {total.toLocaleString()}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-green-100 bg-green-50 p-4 text-center">
-            <p className="text-xs font-medium text-green-700">Published</p>
-            <p className="mt-1 text-2xl font-bold text-green-700">
-              {published.toLocaleString()}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center">
-            <p className="text-xs font-medium text-amber-700">Pending</p>
-            <p className="mt-1 text-2xl font-bold text-amber-700">
-              {pending.toLocaleString()}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-medium text-gray-600">Publishing progress</span>
-          <span className="font-semibold text-red-600">{percent}%</span>
-        </div>
-
-        <div className="h-3 overflow-hidden rounded-full bg-red-100">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-500"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function RecentResults({ data }: RecentResultsProps) {
-  return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-gray-900">Recent Results</p>
-          <p className="mt-1 text-sm text-gray-500">
-            Latest applicant result activity
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-gray-100 p-2 text-gray-700">
-          <Clock3 className="h-5 w-5" />
-        </div>
-      </div>
-
-      <div className="mt-5 space-y-3">
-        {data.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
-            No recent results found.
-          </div>
-        ) : (
-          data.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-4 transition hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-gray-900">
-                  {item.fullName}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Ref #: {item.referenceNumber}
-                </p>
-              </div>
-
-              <div className="text-left sm:text-right">
-                <p className="text-lg font-bold text-red-600">
-                  {item.overallPercentage}%
-                </p>
-                <p
-                  className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    item.isPublished
-                      ? "bg-green-50 text-green-700"
-                      : "bg-amber-50 text-amber-700"
-                  }`}
-                >
-                  {item.isPublished ? "Published" : "Pending"}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  )
-}
-
-function QuickInsights({ stats, trends }: QuickInsightsProps) {
-  const highestTrend = trends.reduce<TrendItem | null>(
-    (best, current) =>
-      !best || current.average > best.average ? current : best,
-    null
-  )
-
-  const publishRate =
-    stats.totalResults > 0
-      ? Math.round((stats.publishedResults / stats.totalResults) * 100)
-      : 0
-
-  return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-      <p className="text-sm font-semibold text-gray-900">Admin Snapshot</p>
-
-      <div className="mt-5 space-y-4">
-        <div className="rounded-2xl bg-gray-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-red-50 p-2 text-red-600">
-              <ArrowUpRight className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Publish rate
-              </p>
-              <p className="mt-1 text-sm text-gray-600">
-                {publishRate}% of all generated results are already published.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-gray-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
-              <School className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Best performing schedule
-              </p>
-              <p className="mt-1 text-sm text-gray-600">
-                {highestTrend
-                  ? `${highestTrend.label} leads with an average of ${highestTrend.average}%.`
-                  : "No trend data available yet."}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-gray-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-green-50 p-2 text-green-600">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Operational focus
-              </p>
-              <p className="mt-1 text-sm text-gray-600">
-                Focus on unreleased results first so the admin team can reduce
-                pending records faster.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    </div>
   )
 }
 
@@ -302,67 +56,204 @@ export default async function AdminDashboardPage() {
     getRecentResults(),
   ])
 
-  const safeStats = {
-    totalApplicants: Number(stats?.totalApplicants ?? 0),
-    totalResults: Number(stats?.totalResults ?? 0),
-    publishedResults: Number(stats?.publishedResults ?? 0),
-    unpublishedResults: Number(stats?.unpublishedResults ?? 0),
-  }
-
-  const safeTrends = Array.isArray(trends) ? trends : []
-  const safeRecentResults = Array.isArray(recentResults) ? recentResults : []
+  const publishRate =
+    stats.totalResults > 0
+      ? Math.round((stats.publishedResults / stats.totalResults) * 100)
+      : 0
 
   return (
     <div className="space-y-6">
-      <PublishingStatus
-        total={safeStats.totalResults}
-        published={safeStats.publishedResults}
-        pending={safeStats.unpublishedResults}
-      />
+      {/* Header */}
+      <section className="rounded-[2rem] border border-red-100 bg-gradient-to-br from-red-700 via-red-600 to-red-800 p-6 text-white shadow-sm sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-red-100">
+              Testing and Evaluation Center
+            </p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-4xl">
+              Dashboard Overview
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-red-50">
+              Monitor applicants, CET result records, publication status, and
+              performance trends in one centralized admin dashboard.
+            </p>
+          </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+          <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/20">
+            <p className="text-xs text-red-100">Active Academic Year</p>
+            <p className="mt-1 text-lg font-bold">
+              {stats.activeSchoolYear ?? "Not set"}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Alert */}
+      {stats.unpublishedResults > 0 && (
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="font-bold text-amber-900">
+                  Pending results need attention
+                </p>
+                <p className="mt-1 text-sm text-amber-700">
+                  There are {formatNumber(stats.unpublishedResults)} result
+                  records waiting to be released.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/publish-results"
+              className="rounded-2xl bg-amber-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-amber-700"
+            >
+              Review Results
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Main Status */}
+      <section className="rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-500">
+              Publication Progress
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-gray-950 sm:text-3xl">
+              {publishRate}% of CET results are published
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-gray-500">
+              This helps the admin quickly identify how many results are already
+              visible to applicants and how many still require action.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl bg-gray-50 p-4 text-center">
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="mt-1 text-xl font-bold text-gray-950">
+                {formatNumber(stats.totalResults)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-green-50 p-4 text-center">
+              <p className="text-xs text-green-700">Published</p>
+              <p className="mt-1 text-xl font-bold text-green-700">
+                {formatNumber(stats.publishedResults)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-amber-50 p-4 text-center">
+              <p className="text-xs text-amber-700">Pending</p>
+              <p className="mt-1 text-xl font-bold text-amber-700">
+                {formatNumber(stats.unpublishedResults)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 h-3 overflow-hidden rounded-full bg-gray-100">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-red-700 to-red-500 transition-all"
+            style={{ width: `${publishRate}%` }}
+          />
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Applicants"
-          value={safeStats.totalApplicants}
-          subtitle="Total registered applicants"
+          value={stats.totalApplicants}
+          description="Total registered CET applicants"
           icon={Users}
-          tone="blue"
         />
         <StatCard
-          title="Results"
-          value={safeStats.totalResults}
-          subtitle="Generated result records"
+          title="Generated Results"
+          value={stats.totalResults}
+          description="Total encoded result records"
           icon={FileCheck2}
-          tone="red"
         />
         <StatCard
           title="Published"
-          value={safeStats.publishedResults}
-          subtitle="Visible to applicants"
+          value={stats.publishedResults}
+          description="Visible to applicants"
           icon={CheckCircle2}
-          tone="green"
         />
         <StatCard
-          title="Pending"
-          value={safeStats.unpublishedResults}
-          subtitle="Awaiting release"
-          icon={ClipboardList}
-          tone="amber"
+          title="Average Score"
+          value={`${stats.averageOverallPercentage}%`}
+          description="Overall performance average"
+          icon={BarChart3}
         />
       </section>
 
+      {/* Charts + Recent */}
       <section className="grid gap-6 xl:grid-cols-12">
         <div className="xl:col-span-8">
-          <DashboardCharts stats={safeStats} trends={safeTrends} />
+          <DashboardCharts stats={stats} trends={trends} />
         </div>
 
-        <div className="xl:col-span-4">
-          <QuickInsights stats={safeStats} trends={safeTrends} />
-        </div>
-      </section>
+        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm xl:col-span-4">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <p className="font-bold text-gray-950">Recent Results</p>
+              <p className="text-sm text-gray-500">Latest encoded records</p>
+            </div>
 
-      <section>
-        <RecentResults data={safeRecentResults} />
+            <div className="rounded-2xl bg-red-50 p-3 text-red-700">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {recentResults.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+                No recent results yet.
+              </div>
+            ) : (
+              recentResults.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-gray-100 bg-gray-50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-950">
+                        {item.fullName}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Ref: {item.referenceNumber}
+                      </p>
+                    </div>
+
+                    <p className="font-bold text-red-700">
+                      {item.overallPercentage}%
+                    </p>
+                  </div>
+
+                  <div className="mt-3">
+                    <span
+                      className={
+                        item.isPublished
+                          ? "rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700"
+                          : "rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                      }
+                    >
+                      {item.isPublished ? "Published" : "Pending"}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </section>
     </div>
   )
