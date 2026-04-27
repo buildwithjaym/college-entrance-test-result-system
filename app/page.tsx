@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 export const metadata: Metadata = {
   title: "Home",
   description:
-    "Access official CET results, check program recommendations, and view school-year-based exam result information for Basilan State College.",
+    "Access official College Entrance Test results, check program recommendations, and view school-year-based exam result information.",
 }
 
 export default function HomePage() {
