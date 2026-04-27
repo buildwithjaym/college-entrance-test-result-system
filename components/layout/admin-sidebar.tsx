@@ -5,9 +5,6 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
   FileBarChart2,
   FileCheck2,
   GraduationCap,
@@ -25,57 +22,28 @@ const navSections = [
   {
     title: "Overview",
     items: [
-      {
-        label: "Dashboard",
-        href: "/admin/dashboard",
-        icon: LayoutDashboard,
-      },
+      { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     ],
   },
   {
     title: "Management",
     items: [
-      {
-        label: "Applicants",
-        href: "/admin/applicants",
-        icon: Users,
-      },
-      {
-        label: "Release Results",
-        href: "/admin/publish-results",
-        icon: UploadCloud,
-        badge: "1",
-      },
-      {
-        label: "Result Records",
-        href: "/admin/results",
-        icon: FileCheck2,
-      },
+      { label: "Applicants", href: "/admin/applicants", icon: Users },
+      { label: "Release Results", href: "/admin/publish-results", icon: UploadCloud },
+      { label: "Result Records", href: "/admin/results", icon: FileCheck2 },
     ],
   },
   {
     title: "Monitoring",
     items: [
-      {
-        label: "Reports & Analytics",
-        href: "/admin/reports",
-        icon: FileBarChart2,
-      },
+      { label: "Reports & Analytics", href: "/admin/reports", icon: FileBarChart2 },
     ],
   },
   {
     title: "System Setup",
     items: [
-      {
-        label: "Test Schedules",
-        href: "/admin/test-schedules",
-        icon: CalendarDays,
-      },
-      {
-        label: "Academic Years",
-        href: "/admin/school-years",
-        icon: GraduationCap,
-      },
+      { label: "Test Schedules", href: "/admin/test-schedules", icon: CalendarDays },
+      { label: "Academic Years", href: "/admin/school-years", icon: GraduationCap },
     ],
   },
 ]
@@ -84,7 +52,6 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
 
   const handleLogout = () => {
     router.push("/admin/login")
@@ -92,16 +59,16 @@ export function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Mobile hamburger */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-50 rounded-xl bg-white p-2 shadow-md ring-1 ring-gray-200 md:hidden"
-        aria-label="Open sidebar"
+        className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-gray-200 md:hidden"
+        aria-label="Open menu"
       >
-        <Menu className="h-5 w-5 text-red-600" />
+        <Menu className="h-5 w-5 text-red-700" />
       </button>
 
-      {/* Mobile backdrop */}
+      {/* Mobile overlay */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
@@ -111,87 +78,55 @@ export function AdminSidebar() {
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-white transition-all duration-300",
-          collapsed ? "md:w-20" : "w-72",
-          open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "fixed left-0 top-0 z-50 flex h-dvh w-[280px] flex-col border-r border-gray-200 bg-white shadow-sm transition-transform duration-300 md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
+        <div className="flex h-[82px] items-center justify-between border-b border-gray-100 px-5">
           <Link
             href="/admin/dashboard"
-            className="flex min-w-0 items-center gap-3"
             onClick={() => setOpen(false)}
+            className="flex min-w-0 items-center gap-3"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-50 ring-1 ring-red-100">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-50 ring-1 ring-red-100">
               <Image
                 src="/new.png"
                 alt="CET Logo"
-                width={34}
-                height={34}
+                width={36}
+                height={36}
                 className="object-contain"
                 priority
               />
             </div>
 
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="truncate text-[10px] font-medium uppercase tracking-widest text-gray-400">
-                  Testing & Evaluation Center
-                </p>
-                <p className="truncate text-sm font-bold text-gray-900">
-                  Admin Panel
-                </p>
-              </div>
-            )}
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Testing & Evaluation
+              </p>
+              <p className="truncate text-base font-bold text-gray-950">
+                Admin Panel
+              </p>
+            </div>
           </Link>
 
           <button
-            className="rounded-lg p-1.5 hover:bg-gray-100 md:hidden"
             onClick={() => setOpen(false)}
-            aria-label="Close sidebar"
+            className="rounded-xl p-2 hover:bg-gray-100 md:hidden"
+            aria-label="Close menu"
           >
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
-        {/* Collapse button desktop */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-20 hidden h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm hover:bg-red-50 md:flex"
-          aria-label="Collapse sidebar"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4 text-gray-500" />
-          ) : (
-            <ChevronLeft className="h-4 w-4 text-gray-500" />
-          )}
-        </button>
-
-        {/* Quick action */}
-        {!collapsed && (
-          <div className="px-4 pt-5">
-            <Link
-              href="/admin/publish-results"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Release CET Results
-            </Link>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto px-3 py-5">
-          <nav className="space-y-6">
+        {/* Navigation - compact, no scrolling needed */}
+        <div className="flex flex-1 flex-col justify-between px-4 py-4">
+          <nav className="space-y-4">
             {navSections.map((section) => (
               <div key={section.title}>
-                {!collapsed && (
-                  <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                    {section.title}
-                  </p>
-                )}
+                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
+                  {section.title}
+                </p>
 
                 <div className="space-y-1">
                   {section.items.map((item) => {
@@ -205,40 +140,28 @@ export function AdminSidebar() {
                         key={item.href}
                         href={item.href}
                         onClick={() => setOpen(false)}
-                        title={collapsed ? item.label : undefined}
                         className={cn(
-                          "group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                          collapsed ? "justify-center" : "gap-3",
+                          "group relative flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                           isActive
-                            ? "bg-red-50 text-red-700"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-red-600"
+                            ? "bg-gradient-to-r from-red-700 to-red-600 text-white shadow-md shadow-red-900/15"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-red-700"
                         )}
                       >
-                        {isActive && (
-                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-red-600" />
-                        )}
-
-                        <Icon
+                        <span
                           className={cn(
-                            "h-5 w-5 shrink-0 transition",
+                            "flex h-8 w-8 items-center justify-center rounded-xl transition",
                             isActive
-                              ? "text-red-600"
-                              : "text-gray-400 group-hover:text-red-600"
+                              ? "bg-white/15"
+                              : "bg-gray-50 text-gray-400 group-hover:bg-red-50 group-hover:text-red-700"
                           )}
-                        />
+                        >
+                          <Icon className="h-4.5 w-4.5" />
+                        </span>
 
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 truncate">
-                              {item.label}
-                            </span>
+                        <span className="truncate">{item.label}</span>
 
-                            {item.badge && (
-                              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-                                {item.badge}
-                              </span>
-                            )}
-                          </>
+                        {isActive && (
+                          <span className="ml-auto h-2 w-2 rounded-full bg-white/90" />
                         )}
                       </Link>
                     )
@@ -247,29 +170,24 @@ export function AdminSidebar() {
               </div>
             ))}
           </nav>
-        </div>
 
-        {/* Admin identity */}
-        {!collapsed && (
-          <div className="mx-4 mb-3 rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100">
-            <p className="text-sm font-semibold text-gray-900">TEC Admin</p>
-            <p className="text-xs text-gray-500">Authorized Staff</p>
+          {/* Bottom area */}
+          <div className="space-y-3 border-t border-gray-100 pt-4">
+            <div className="rounded-2xl bg-gray-50 px-4 py-3 ring-1 ring-gray-100">
+              <p className="text-sm font-bold text-gray-900">TEC Admin</p>
+              <p className="text-xs text-gray-500">Authorized Staff</p>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-700"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-50">
+                <LogOut className="h-4.5 w-4.5" />
+              </span>
+              Logout
+            </button>
           </div>
-        )}
-
-        {/* Footer */}
-        <div className="border-t border-gray-100 px-3 py-4">
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600",
-              collapsed ? "justify-center" : "gap-3"
-            )}
-            title={collapsed ? "Logout" : undefined}
-          >
-            <LogOut className="h-5 w-5" />
-            {!collapsed && "Logout"}
-          </button>
         </div>
       </aside>
     </>
