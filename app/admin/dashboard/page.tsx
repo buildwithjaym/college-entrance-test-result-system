@@ -6,9 +6,11 @@ import {
   Clock3,
   FileText,
   TrendingUp,
+  UsersRound,
 } from "lucide-react"
 
 import { getDashboardData } from "@/lib/dashboard"
+import { DashboardCharts } from "./_components/dashboard-charts"
 
 function formatDate(date?: string | null) {
   if (!date) return "—"
@@ -41,15 +43,17 @@ function StatCard({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-3xl sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500 sm:text-sm">
             {title}
           </p>
+
           <p className="mt-2 truncate text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             {value}
           </p>
+
           <p className="mt-2 text-xs leading-5 text-slate-500">{subtitle}</p>
         </div>
 
@@ -64,7 +68,21 @@ function StatCard({
 }
 
 export default async function DashboardPage() {
-  const { stats, recentResults, releaseRate } = await getDashboardData()
+  const { stats, recentResults, releaseRate, trends, batchBreakdown } =
+    await getDashboardData()
+
+  const qualifierCount = recentResults.filter(
+    (result) => Number(result.overall_percentage ?? 0) >= 35,
+  ).length
+
+  const nonQualifierCount = recentResults.filter(
+    (result) => Number(result.overall_percentage ?? 0) < 35,
+  ).length
+
+  const qualifierRate =
+    recentResults.length > 0
+      ? Math.round((qualifierCount / recentResults.length) * 100)
+      : 0
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-4 px-0 sm:space-y-6">
@@ -80,12 +98,12 @@ export default async function DashboardPage() {
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-red-50">
-              Monitor generated results, release progress, pending records, and
-              recent CET result activity.
+              Monitor result releases, applicant performance, qualifiers,
+              non-qualifiers, and batch activity.
             </p>
           </div>
 
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 xl:max-w-[460px]">
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 xl:max-w-[520px]">
             <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
               <p className="text-xs text-red-100">Total Results</p>
               <p className="mt-1 text-xl font-bold sm:text-2xl">
@@ -101,9 +119,9 @@ export default async function DashboardPage() {
             </div>
 
             <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-              <p className="text-xs text-red-100">Release Rate</p>
+              <p className="text-xs text-red-100">Qualifier Rate</p>
               <p className="mt-1 text-xl font-bold sm:text-2xl">
-                {releaseRate}%
+                {qualifierRate}%
               </p>
             </div>
           </div>
@@ -118,6 +136,7 @@ export default async function DashboardPage() {
           icon={ClipboardList}
           tone="blue"
         />
+
         <StatCard
           title="Released Results"
           value={stats.publishedResults}
@@ -125,6 +144,7 @@ export default async function DashboardPage() {
           icon={CheckCircle2}
           tone="green"
         />
+
         <StatCard
           title="Pending Results"
           value={stats.pendingResults}
@@ -132,6 +152,7 @@ export default async function DashboardPage() {
           icon={Clock3}
           tone="amber"
         />
+
         <StatCard
           title="Average Score"
           value={`${stats.averageScore}%`}
@@ -140,6 +161,21 @@ export default async function DashboardPage() {
           tone="red"
         />
       </section>
+
+      <DashboardCharts
+        stats={{
+          totalResults: stats.totalResults,
+          publishedResults: stats.publishedResults,
+          unpublishedResults: stats.pendingResults,
+          averageScore: stats.averageScore,
+        }}
+        trends={trends ?? []}
+        batchBreakdown={batchBreakdown ?? []}
+        qualifierData={[
+          { name: "Qualifiers", value: qualifierCount },
+          { name: "Non-Qualifiers", value: nonQualifierCount },
+        ]}
+      />
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
@@ -164,7 +200,7 @@ export default async function DashboardPage() {
           {recentResults.length > 0 ? (
             <>
               <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[720px] text-left">
+                <table className="w-full min-w-[760px] text-left">
                   <thead>
                     <tr className="border-b border-slate-200">
                       <th className="pb-4 text-sm font-semibold text-slate-500">
@@ -177,103 +213,138 @@ export default async function DashboardPage() {
                         Score
                       </th>
                       <th className="pb-4 text-sm font-semibold text-slate-500">
+                        Remarks
+                      </th>
+                      <th className="pb-4 text-sm font-semibold text-slate-500">
                         Status
                       </th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {recentResults.map((result) => (
-                      <tr
-                        key={result.id}
-                        className="border-b border-slate-100 transition hover:bg-red-50/40"
-                      >
-                        <td className="py-4">
-                          <p className="font-semibold text-slate-950">
-                            {result.applicant_name}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {result.reference_number ?? "No reference"}
-                          </p>
-                        </td>
+                    {recentResults.map((result) => {
+                      const score = Number(result.overall_percentage ?? 0)
+                      const isQualifier = score >= 35
 
-                        <td className="py-4">
-                          <p className="text-sm font-medium text-slate-700">
-                            {result.schedule_name ?? "—"}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {formatDate(result.exam_date)}
-                          </p>
-                        </td>
+                      return (
+                        <tr
+                          key={result.id}
+                          className="border-b border-slate-100 transition hover:bg-red-50/40"
+                        >
+                          <td className="py-4">
+                            <p className="font-semibold text-slate-950">
+                              {result.applicant_name}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                              {result.reference_number ?? "No reference"}
+                            </p>
+                          </td>
 
-                        <td className="py-4">
-                          <span className="rounded-full bg-red-50 px-3 py-1 text-sm font-bold text-red-700">
-                            {Number(result.overall_percentage ?? 0)}%
-                          </span>
-                        </td>
+                          <td className="py-4">
+                            <p className="text-sm font-medium text-slate-700">
+                              {result.schedule_name ?? "—"}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                              {formatDate(result.exam_date)}
+                            </p>
+                          </td>
 
-                        <td className="py-4">
-                          {result.is_published ? (
-                            <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
-                              Released
+                          <td className="py-4">
+                            <span className="rounded-full bg-red-50 px-3 py-1 text-sm font-bold text-red-700">
+                              {score}%
                             </span>
-                          ) : (
-                            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                              Pending
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+
+                          <td className="py-4">
+                            {isQualifier ? (
+                              <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
+                                Qualifier
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                                Non-Qualifier
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-4">
+                            {result.is_published ? (
+                              <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
+                                Released
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                                Pending
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
 
               <div className="grid gap-3 lg:hidden">
-                {recentResults.map((result) => (
-                  <div
-                    key={result.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-bold text-slate-950">
-                          {result.applicant_name}
+                {recentResults.map((result) => {
+                  const score = Number(result.overall_percentage ?? 0)
+                  const isQualifier = score >= 35
+
+                  return (
+                    <div
+                      key={result.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-slate-950">
+                            {result.applicant_name}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {result.reference_number ?? "No reference"}
+                          </p>
+                        </div>
+
+                        <span className="shrink-0 rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
+                          {score}%
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                        <p>
+                          <span className="font-semibold">Schedule:</span>{" "}
+                          {result.schedule_name ?? "—"}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {result.reference_number ?? "No reference"}
+                        <p>
+                          <span className="font-semibold">Exam Date:</span>{" "}
+                          {formatDate(result.exam_date)}
                         </p>
                       </div>
 
-                      <span className="shrink-0 rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
-                        {Number(result.overall_percentage ?? 0)}%
-                      </span>
-                    </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {isQualifier ? (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                            Qualifier
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">
+                            Non-Qualifier
+                          </span>
+                        )}
 
-                    <div className="mt-4 grid gap-2 text-sm text-slate-600">
-                      <p>
-                        <span className="font-semibold">Schedule:</span>{" "}
-                        {result.schedule_name ?? "—"}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Exam Date:</span>{" "}
-                        {formatDate(result.exam_date)}
-                      </p>
+                        {result.is_published ? (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                            Released
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                            Pending
+                          </span>
+                        )}
+                      </div>
                     </div>
-
-                    <div className="mt-4">
-                      {result.is_published ? (
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
-                          Released
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </>
           ) : (
@@ -305,14 +376,16 @@ export default async function DashboardPage() {
 
             <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-red-700"
+                className="h-full rounded-full bg-red-700 transition-all duration-500"
                 style={{ width: `${releaseRate}%` }}
               />
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-green-50 p-4">
-                <p className="text-xs font-semibold text-green-700">Released</p>
+                <p className="text-xs font-semibold text-green-700">
+                  Released
+                </p>
                 <p className="mt-1 text-xl font-bold text-green-800">
                   {stats.publishedResults}
                 </p>
@@ -328,6 +401,43 @@ export default async function DashboardPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                <UsersRound className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-950">
+                  Qualification Summary
+                </p>
+                <p className="text-sm text-slate-500">
+                  Passing rule: 35% and above.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="rounded-2xl bg-green-50 p-4">
+                <p className="text-xs font-semibold text-green-700">
+                  Qualifiers
+                </p>
+                <p className="mt-1 text-xl font-bold text-green-800">
+                  {qualifierCount}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-100 p-4">
+                <p className="text-xs font-semibold text-slate-600">
+                  Non-Qualifiers
+                </p>
+                <p className="mt-1 text-xl font-bold text-slate-800">
+                  {nonQualifierCount}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 md:col-span-2 xl:col-span-1">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
                 <FileText className="h-5 w-5" />
