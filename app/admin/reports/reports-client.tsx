@@ -1,180 +1,194 @@
 "use client"
 
+import Link from "next/link"
 import { useMemo, useState } from "react"
 import {
-  ArrowDownAZ,
-  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Download,
   FileText,
   Filter,
+  Loader2,
+  RotateCcw,
+  Search,
   Trophy,
+  Users,
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
-import type { ReportRow, SchoolYearOption } from "./actions"
+import type {
+  ReportRow,
+  ReportSort,
+  ReportStatus,
+  SchoolYearOption,
+} from "./actions"
 import { showError, showInfo, showSuccess } from "@/lib/toast"
 
-type SortBy =
-  | "score_high"
-  | "score_low"
-  | "name_asc"
-  | "name_desc"
-  | "exam_newest"
-  | "exam_oldest"
-
-type StatusFilter = "all" | "published" | "pending"
-
-type RankedRow = ReportRow & {
-  rank: number
-  full_name: string
+type ReportsClientProps = {
+  schoolYears: SchoolYearOption[]
+  rows: ReportRow[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+  query: string
+  selectedSchoolYearId: number | null
+  status: ReportStatus
+  sort: ReportSort
 }
 
-function getInitialSchoolYearId(schoolYears: SchoolYearOption[]) {
-  const active = schoolYears.find((item) => item.is_active)
-  return active?.id ?? schoolYears[0]?.id ?? null
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+
+function buildPageHref({
+  query,
+  schoolYearId,
+  status,
+  sort,
+  page,
+  pageSize,
+}: {
+  query: string
+  schoolYearId: number | null
+  status: string
+  sort: string
+  page: number
+  pageSize: number
+}) {
+  const params = new URLSearchParams()
+
+  if (query) params.set("q", query)
+  if (schoolYearId) params.set("schoolYearId", String(schoolYearId))
+  if (status !== "published") params.set("status", status)
+  if (sort !== "score_high") params.set("sort", sort)
+
+  params.set("page", String(page))
+  params.set("pageSize", String(pageSize))
+
+  return `/admin/reports?${params.toString()}`
 }
 
-function buildFullName(row: ReportRow) {
-  const middle = row.middle_name?.trim() ? ` ${row.middle_name.trim()}` : ""
-  return `${row.last_name}, ${row.first_name}${middle}`
+function formatName(row: ReportRow) {
+  return [row.first_name, row.middle_name, row.last_name]
+    .filter(Boolean)
+    .join(" ")
 }
 
-function formatReference(value: string | null) {
-  return value?.trim() ? value : "—"
-}
+function formatDate(date?: string | null) {
+  if (!date) return "—"
 
-function formatDate(value: string | null) {
-  if (!value) return "—"
-
-  return new Date(value).toLocaleDateString("en-PH", {
+  return new Date(date).toLocaleDateString("en-PH", {
     year: "numeric",
     month: "short",
     day: "numeric",
   })
 }
 
-function getRankTone(rank: number) {
-  if (rank === 1) return "bg-amber-50 text-amber-700"
-  if (rank === 2) return "bg-slate-100 text-slate-700"
-  if (rank === 3) return "bg-orange-50 text-orange-700"
-  return "bg-red-50 text-red-700"
+function getQualification(score: number) {
+  return score >= 35
+    ? {
+        label: "Qualifier",
+        className: "bg-green-50 text-green-700 ring-green-100",
+      }
+    : {
+        label: "Non-Qualifier",
+        className: "bg-slate-100 text-slate-600 ring-slate-200",
+      }
 }
 
-function buildRankedRows(rows: ReportRow[], sortBy: SortBy): RankedRow[] {
-  const rankedBase = [...rows].sort((a, b) => {
-    if (b.overall_percentage !== a.overall_percentage) {
-      return b.overall_percentage - a.overall_percentage
-    }
+function getStatusLabel(status: ReportStatus) {
+  if (status === "published") return "Released only"
+  if (status === "pending") return "Pending only"
+  return "All statuses"
+}
 
-    const last = a.last_name.localeCompare(b.last_name)
-    if (last !== 0) return last
+function getSortLabel(sort: ReportSort) {
+  const labels: Record<ReportSort, string> = {
+    score_high: "Highest score",
+    score_low: "Lowest score",
+    name_asc: "Name A-Z",
+    name_desc: "Name Z-A",
+    exam_newest: "Newest exam",
+    exam_oldest: "Oldest exam",
+  }
 
-    const first = a.first_name.localeCompare(b.first_name)
-    if (first !== 0) return first
-
-    return a.applicant_id - b.applicant_id
-  })
-
-  let previousScore: number | null = null
-  let previousRank = 0
-
-  const ranked = rankedBase.map((row, index) => {
-    const rank =
-      previousScore !== null && row.overall_percentage === previousScore
-        ? previousRank
-        : index + 1
-
-    previousScore = row.overall_percentage
-    previousRank = rank
-
-    return {
-      ...row,
-      rank,
-      full_name: buildFullName(row),
-    }
-  })
-
-  return ranked.sort((a, b) => {
-    if (sortBy === "score_high") return b.overall_percentage - a.overall_percentage
-    if (sortBy === "score_low") return a.overall_percentage - b.overall_percentage
-    if (sortBy === "name_asc") return a.full_name.localeCompare(b.full_name)
-    if (sortBy === "name_desc") return b.full_name.localeCompare(a.full_name)
-
-    if (sortBy === "exam_newest") {
-      return (
-        new Date(b.exam_date ?? 0).getTime() -
-        new Date(a.exam_date ?? 0).getTime()
-      )
-    }
-
-    if (sortBy === "exam_oldest") {
-      return (
-        new Date(a.exam_date ?? 0).getTime() -
-        new Date(b.exam_date ?? 0).getTime()
-      )
-    }
-
-    return 0
-  })
+  return labels[sort]
 }
 
 export function ReportsClient({
   schoolYears,
   rows,
-}: {
-  schoolYears: SchoolYearOption[]
-  rows: ReportRow[]
-}) {
-  const [selectedSchoolYearId, setSelectedSchoolYearId] = useState<number | null>(
-    getInitialSchoolYearId(schoolYears)
-  )
-  const [sortBy, setSortBy] = useState<SortBy>("score_high")
-  const [status, setStatus] = useState<StatusFilter>("published")
+  total,
+  page,
+  pageSize,
+  totalPages,
+  query,
+  selectedSchoolYearId,
+  status,
+  sort,
+}: ReportsClientProps) {
   const [downloading, setDownloading] = useState(false)
 
   const selectedSchoolYear = useMemo(() => {
     return schoolYears.find((item) => item.id === selectedSchoolYearId) ?? null
   }, [schoolYears, selectedSchoolYearId])
 
-  const filteredRows = useMemo(() => {
-    if (!selectedSchoolYearId) return []
+  const topScore = useMemo(() => {
+    if (rows.length === 0) return 0
+    return Math.max(...rows.map((row) => row.overall_percentage))
+  }, [rows])
 
-    return rows.filter((row) => {
-      const matchesSchoolYear = row.school_year_id === selectedSchoolYearId
-      const matchesStatus =
-        status === "all"
-          ? true
-          : status === "published"
-            ? row.is_published
-            : !row.is_published
+  const qualifiers = useMemo(() => {
+    return rows.filter((row) => row.overall_percentage >= 35).length
+  }, [rows])
 
-      return matchesSchoolYear && matchesStatus
-    })
-  }, [rows, selectedSchoolYearId, status])
+  const nonQualifiers = useMemo(() => {
+    return rows.filter((row) => row.overall_percentage < 35).length
+  }, [rows])
 
-  const rankedRows = useMemo(() => {
-    return buildRankedRows(filteredRows, sortBy)
-  }, [filteredRows, sortBy])
+  const averageScore = useMemo(() => {
+    if (rows.length === 0) return 0
 
-  const topStudent = useMemo(() => {
-    return buildRankedRows(filteredRows, "score_high")[0] ?? null
-  }, [filteredRows])
+    const totalScore = rows.reduce(
+      (sum, row) => sum + row.overall_percentage,
+      0,
+    )
 
-  const averageScore =
-    rankedRows.length > 0
-      ? rankedRows.reduce((sum, row) => sum + row.overall_percentage, 0) /
-        rankedRows.length
-      : 0
+    return Math.round(totalScore / rows.length)
+  }, [rows])
+
+  const currentStart = rows.length > 0 ? (page - 1) * pageSize + 1 : 0
+
+  const currentEnd = Math.min((page - 1) * pageSize + rows.length, total)
+
+  const hasFilters =
+    Boolean(query) ||
+    Boolean(selectedSchoolYearId) ||
+    status !== "published" ||
+    sort !== "score_high" ||
+    pageSize !== 20
+
+  const previousHref = buildPageHref({
+    query,
+    schoolYearId: selectedSchoolYearId,
+    status,
+    sort,
+    page: Math.max(1, page - 1),
+    pageSize,
+  })
+
+  const nextHref = buildPageHref({
+    query,
+    schoolYearId: selectedSchoolYearId,
+    status,
+    sort,
+    page: Math.min(totalPages, page + 1),
+    pageSize,
+  })
 
   async function handleDownloadPdf() {
-    if (!selectedSchoolYear) {
-      showError("Please select a school year.")
-      return
-    }
-
-    if (rankedRows.length === 0) {
-      showInfo("No report rows available for this filter.")
+    if (rows.length === 0) {
+      showInfo("No report rows available for the current filter.")
       return
     }
 
@@ -188,48 +202,55 @@ export function ReportsClient({
         format: "a4",
       })
 
+      const title = "College Entrance Test Ranking Report"
+      const yearLabel = selectedSchoolYear?.label ?? "All School Years"
+
       doc.setFont("helvetica", "bold")
       doc.setFontSize(16)
       doc.text("Basilan State College", 105, 16, { align: "center" })
 
       doc.setFontSize(13)
-      doc.text("College Entrance Test Ranking Report", 105, 23, {
-        align: "center",
-      })
+      doc.text(title, 105, 24, { align: "center" })
 
       doc.setFont("helvetica", "normal")
       doc.setFontSize(10)
-      doc.text(`School Year: ${selectedSchoolYear.label}`, 14, 34)
-      doc.text(`Status: ${status.toUpperCase()}`, 14, 40)
-      doc.text(`Sort: ${sortBy.replace("_", " ").toUpperCase()}`, 14, 46)
-      doc.text(`Generated Rows: ${rankedRows.length}`, 14, 52)
+      doc.text(`School Year: ${yearLabel}`, 14, 36)
+      doc.text(`Status: ${getStatusLabel(status)}`, 14, 42)
+      doc.text(`Sort: ${getSortLabel(sort)}`, 14, 48)
+      doc.text(`Page: ${page} of ${totalPages}`, 14, 54)
+      doc.text(`Rows in PDF: ${rows.length}`, 14, 60)
 
       autoTable(doc, {
-        startY: 58,
-        head: [["Rank", "Reference No.", "Student Name", "Average", "Status"]],
-        body: rankedRows.map((row) => [
-          row.rank,
-          formatReference(row.reference_number),
-          row.full_name,
+        startY: 68,
+        head: [
+          [
+            "Rank",
+            "Reference No.",
+            "Student Name",
+            "School Year",
+            "Average",
+            "Qualification",
+            "Status",
+          ],
+        ],
+        body: rows.map((row, index) => [
+          `#${(page - 1) * pageSize + index + 1}`,
+          row.reference_number || "—",
+          formatName(row),
+          row.school_year_label,
           `${row.overall_percentage.toFixed(2)}%`,
-          row.is_published ? "Published" : "Pending",
+          row.overall_percentage >= 35 ? "Qualifier" : "Non-Qualifier",
+          row.is_published ? "Released" : "Pending",
         ]),
         styles: {
-          fontSize: 8.5,
-          cellPadding: 3,
+          fontSize: 8,
+          cellPadding: 2.5,
           valign: "middle",
         },
         headStyles: {
-          fillColor: [220, 38, 38],
+          fillColor: [185, 28, 28],
           textColor: [255, 255, 255],
           fontStyle: "bold",
-        },
-        columnStyles: {
-          0: { cellWidth: 18, halign: "center" },
-          1: { cellWidth: 42 },
-          2: { cellWidth: 75 },
-          3: { cellWidth: 28, halign: "right" },
-          4: { cellWidth: 28 },
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252],
@@ -242,13 +263,15 @@ export function ReportsClient({
         },
       })
 
-      doc.save(
-        `ranking-report-${selectedSchoolYear.label.replace(/\s+/g, "-")}.pdf`
-      )
+      const filename = `cet-ranking-report-${yearLabel
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") || "all-years"}.pdf`
 
+      doc.save(filename)
       showSuccess("Ranking PDF downloaded successfully.")
     } catch {
-      showError("Failed to generate PDF.")
+      showError("Failed to generate PDF report.")
     } finally {
       setDownloading(false)
     }
@@ -256,158 +279,271 @@ export function ReportsClient({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-[minmax(220px,320px)_180px_220px_1fr] lg:items-end">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            School Year
-          </label>
-          <select
-            value={selectedSchoolYearId ?? ""}
-            onChange={(e) =>
-              setSelectedSchoolYearId(
-                e.target.value ? Number(e.target.value) : null
-              )
-            }
-            className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100"
-          >
-            {schoolYears.map((schoolYear) => (
-              <option key={schoolYear.id} value={schoolYear.id}>
-                {schoolYear.label}
-                {schoolYear.is_active ? " (Active)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            Status
-          </label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100"
-          >
-            <option value="all">All Status</option>
-            <option value="published">Published Only</option>
-            <option value="pending">Pending Only</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            Sort By
-          </label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100"
-          >
-            <option value="score_high">Highest Average</option>
-            <option value="score_low">Lowest Average</option>
-            <option value="name_asc">Student Name A-Z</option>
-            <option value="name_desc">Student Name Z-A</option>
-            <option value="exam_newest">Newest Exam Date</option>
-            <option value="exam_oldest">Oldest Exam Date</option>
-          </select>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={downloading}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 lg:justify-self-end"
-        >
-          <Download className="h-4 w-4" />
-          {downloading ? "Preparing PDF..." : "Download PDF"}
-        </button>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
-            Ranked Students
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">
-            {rankedRows.length}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
-            Top Average
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">
-            {topStudent ? `${topStudent.overall_percentage.toFixed(2)}%` : "—"}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
-            Average Score
-          </p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">
-            {rankedRows.length ? `${averageScore.toFixed(2)}%` : "—"}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
-            Report Filter
-          </p>
-          <p className="mt-1 truncate text-sm font-bold text-slate-900">
-            {status === "all"
-              ? "All Results"
-              : status === "published"
-                ? "Published Results"
-                : "Pending Results"}
-          </p>
-        </div>
-      </div>
-
-      {topStudent ? (
-        <div className="rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 to-white p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-              <Trophy className="h-5 w-5" />
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-500">Records on Page</p>
+              <p className="mt-2 text-3xl font-bold text-slate-950">
+                {rows.length}
+              </p>
             </div>
 
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
-                Top Ranked Student
-              </p>
-              <p className="mt-1 truncate text-lg font-bold text-slate-900">
-                {topStudent.full_name}
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                Average: {topStudent.overall_percentage.toFixed(2)}%
-              </p>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+              <Users className="h-5 w-5" />
             </div>
           </div>
         </div>
-      ) : null}
 
-      {rankedRows.length > 0 ? (
-        <>
-          <div className="hidden overflow-hidden rounded-3xl border border-slate-200 lg:block">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1080px] text-left">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-500">Average Score</p>
+              <p className="mt-2 text-3xl font-bold text-slate-950">
+                {averageScore}%
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-700">
+              <Trophy className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-500">Qualifiers</p>
+              <p className="mt-2 text-3xl font-bold text-green-700">
+                {qualifiers}
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+              <Users className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-500">Top Score</p>
+              <p className="mt-2 text-3xl font-bold text-slate-950">
+                {topScore}%
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+              <Trophy className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-base font-bold text-slate-950">
+                Filter Ranking Reports
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Narrow the report by keyword, school year, release status, score
+                order, and page size.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {hasFilters ? (
+                <Link
+                  href="/admin/reports"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Link>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={downloading}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {downloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Preparing...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <form method="GET">
+            <input type="hidden" name="page" value="1" />
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_180px_160px_170px_140px_120px]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Search student, email, reference no..."
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none transition focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-100"
+                />
+              </div>
+
+              <select
+                name="schoolYearId"
+                defaultValue={selectedSchoolYearId ?? ""}
+                className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-100"
+              >
+                <option value="">All School Years</option>
+
+                {schoolYears.map((schoolYear) => (
+                  <option key={schoolYear.id} value={schoolYear.id}>
+                    {schoolYear.label}
+                    {schoolYear.is_active ? " (Active)" : ""}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="status"
+                defaultValue={status}
+                className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-100"
+              >
+                <option value="published">Released Only</option>
+                <option value="pending">Pending Only</option>
+                <option value="all">All Status</option>
+              </select>
+
+              <select
+                name="sort"
+                defaultValue={sort}
+                className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-100"
+              >
+                <option value="score_high">Highest Score</option>
+                <option value="score_low">Lowest Score</option>
+                <option value="name_asc">Name A-Z</option>
+                <option value="name_desc">Name Z-A</option>
+                <option value="exam_newest">Newest Exam</option>
+                <option value="exam_oldest">Oldest Exam</option>
+              </select>
+
+              <select
+                name="pageSize"
+                defaultValue={String(pageSize)}
+                className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-red-300 focus:bg-white focus:ring-4 focus:ring-red-100"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size} per page
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="submit"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-red-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800"
+              >
+                <Filter className="h-4 w-4" />
+                Apply
+              </button>
+            </div>
+          </form>
+
+          {hasFilters ? (
+            <div className="flex flex-wrap gap-2">
+              {query ? (
+                <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-100">
+                  Search: “{query}”
+                </span>
+              ) : null}
+
+              {selectedSchoolYear ? (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {selectedSchoolYear.label}
+                </span>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  All school years
+                </span>
+              )}
+
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {getStatusLabel(status)}
+              </span>
+
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {getSortLabel(sort)}
+              </span>
+
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {pageSize} per page
+              </span>
+            </div>
+          ) : null}
+
+          {query && rows.length === 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+              No report record matched “
+              <span className="font-semibold">{query}</span>”. Try a shorter
+              keyword, reference number, email address, or schedule name.
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-bold text-slate-950">
+                Ranking Records
+              </p>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Showing {currentStart}-{currentEnd} of {total} records
+              </p>
+            </div>
+
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              Page {page} of {totalPages}
+            </div>
+          </div>
+        </div>
+
+        {rows.length > 0 ? (
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[1200px] text-left">
                 <thead className="bg-slate-50">
-                  <tr>
+                  <tr className="border-b border-slate-200">
                     {[
                       "Rank",
+                      "Student",
                       "Reference No.",
-                      "Family Name",
-                      "First Name",
-                      "Middle Name",
+                      "School Year",
                       "Schedule",
                       "Exam Date",
-                      "Average",
+                      "Score",
+                      "Qualification",
                       "Status",
                     ].map((head) => (
                       <th
                         key={head}
-                        className="px-4 py-4 text-sm font-semibold text-slate-500"
+                        className="px-5 py-4 text-sm font-semibold text-slate-500"
                       >
                         {head}
                       </th>
@@ -416,146 +552,212 @@ export function ReportsClient({
                 </thead>
 
                 <tbody>
-                  {rankedRows.map((row) => (
-                    <tr
-                      key={row.result_id}
-                      className="border-t border-slate-100 transition-colors hover:bg-red-50/20"
-                    >
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-3 py-1 text-xs font-semibold ${getRankTone(
-                            row.rank
-                          )}`}
-                        >
-                          #{row.rank}
-                        </span>
-                      </td>
+                  {rows.map((row, index) => {
+                    const qualification = getQualification(
+                      row.overall_percentage,
+                    )
 
-                      <td className="px-4 py-4 text-sm text-slate-700">
-                        {formatReference(row.reference_number)}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm font-semibold text-slate-900">
-                        {row.last_name}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-slate-700">
-                        {row.first_name}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-slate-500">
-                        {row.middle_name?.trim() || "—"}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-slate-700">
-                        {row.schedule_name ?? "—"}
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-slate-500">
-                        {formatDate(row.exam_date)}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                          {row.overall_percentage.toFixed(2)}%
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        {row.is_published ? (
-                          <span className="inline-flex rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-                            Published
+                    return (
+                      <tr
+                        key={row.result_id}
+                        className="border-b border-slate-100 transition hover:bg-red-50/40"
+                      >
+                        <td className="px-5 py-4">
+                          <span className="rounded-full bg-red-50 px-3 py-1 text-sm font-bold text-red-700">
+                            #{(page - 1) * pageSize + index + 1}
                           </span>
-                        ) : (
-                          <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                            Pending
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-slate-950">
+                            {formatName(row)}
+                          </p>
+
+                          <p className="mt-1 text-sm text-slate-500">
+                            {row.email || "No email"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          {row.reference_number || "—"}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          {row.school_year_label}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          {row.schedule_name || "—"}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-500">
+                          {formatDate(row.exam_date)}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span className="rounded-full bg-red-50 px-3 py-1 text-sm font-bold text-red-700">
+                            {row.overall_percentage}%
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${qualification.className}`}
+                          >
+                            {qualification.label}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          {row.is_published ? (
+                            <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700 ring-1 ring-green-100">
+                              Released
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-100">
+                              Hidden
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
-          </div>
 
-          <div className="grid gap-3 lg:hidden">
-            {rankedRows.map((row) => (
-              <div
-                key={row.result_id}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-bold text-slate-950">
-                      {row.full_name}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {formatReference(row.reference_number)}
-                    </p>
-                  </div>
+            <div className="grid gap-4 p-4 lg:hidden">
+              {rows.map((row, index) => {
+                const qualification = getQualification(
+                  row.overall_percentage,
+                )
 
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${getRankTone(
-                      row.rank
-                    )}`}
+                return (
+                  <div
+                    key={row.result_id}
+                    className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
                   >
-                    #{row.rank}
-                  </span>
-                </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-slate-950">
+                          {formatName(row)}
+                        </p>
 
-                <div className="mt-4 grid gap-2 text-sm text-slate-600">
-                  <p>
-                    <span className="font-semibold">Schedule:</span>{" "}
-                    {row.schedule_name ?? "—"}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Exam Date:</span>{" "}
-                    {formatDate(row.exam_date)}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Average:</span>{" "}
-                    {row.overall_percentage.toFixed(2)}%
-                  </p>
-                </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {row.reference_number || "No reference"}
+                        </p>
+                      </div>
 
-                <div className="mt-4">
-                  {row.is_published ? (
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
-                      Published
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                      Pending
-                    </span>
-                  )}
+                      <span className="shrink-0 rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
+                        #{(page - 1) * pageSize + index + 1}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                      <p>
+                        <span className="font-semibold">Score:</span>{" "}
+                        {row.overall_percentage}%
+                      </p>
+
+                      <p>
+                        <span className="font-semibold">Schedule:</span>{" "}
+                        {row.schedule_name || "—"}
+                      </p>
+
+                      <p>
+                        <span className="font-semibold">School Year:</span>{" "}
+                        {row.school_year_label}
+                      </p>
+
+                      <p>
+                        <span className="font-semibold">Exam Date:</span>{" "}
+                        {formatDate(row.exam_date)}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${qualification.className}`}
+                      >
+                        {qualification.label}
+                      </span>
+
+                      {row.is_published ? (
+                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                          Released
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                          Hidden
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="border-t border-slate-200 p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-500">
+                  Showing {currentStart}-{currentEnd} of {total}
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <Link
+                    href={previousHref}
+                    className={
+                      page <= 1
+                        ? "pointer-events-none inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400"
+                        : "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    }
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Link>
+
+                  <Link
+                    href={nextHref}
+                    className={
+                      page >= totalPages
+                        ? "pointer-events-none inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400"
+                        : "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    }
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
                 </div>
               </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
-          <ArrowDownAZ className="mx-auto h-8 w-8 text-slate-400" />
-          <p className="mt-3 font-semibold text-slate-700">
-            No ranked results found
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Try changing the school year, status filter, or sorting option.
-          </p>
-        </div>
-      )}
+            </div>
+          </>
+        ) : (
+          <div className="px-4 py-16 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <FileText className="h-5 w-5" />
+            </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
-        <div className="flex items-start gap-3">
-          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-          <p>
-            The screen shows full admin ranking details, while the PDF is
-            generated from the currently selected school year, status, and sort
-            option.
-          </p>
-        </div>
-      </div>
+            <p className="mt-4 font-semibold text-slate-800">
+              No report records found
+            </p>
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Try changing your keyword, school year, release status, or sorting
+              preference.
+            </p>
+
+            {hasFilters ? (
+              <Link
+                href="/admin/reports"
+                className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset filters
+              </Link>
+            ) : null}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
