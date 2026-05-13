@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
+const MIN_PAGE_SIZE = 10
+const MAX_PAGE_SIZE = 100
 
 export type ResultsSort =
   | "newest"
@@ -20,9 +22,25 @@ type ActionResult = {
   message: string
 }
 
+export type ResultsPageParams = {
+  query?: string
+  page?: string | number
+  pageSize?: string | number
+  sort?: string
+  status?: string
+}
+
 function normalizePage(value: string | number | null | undefined) {
   const page = Number(value ?? 1)
-  return Number.isFinite(page) && page > 0 ? page : 1
+  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1
+}
+
+function normalizePageSize(value: string | number | null | undefined) {
+  const pageSize = Number(value ?? DEFAULT_PAGE_SIZE)
+
+  if (!Number.isFinite(pageSize)) return DEFAULT_PAGE_SIZE
+
+  return Math.min(Math.max(Math.floor(pageSize), MIN_PAGE_SIZE), MAX_PAGE_SIZE)
 }
 
 function normalizeSort(value: string | null | undefined): ResultsSort {
@@ -46,6 +64,10 @@ function normalizeStatus(value: string | null | undefined): ResultsStatus {
   return allowed.includes(value as ResultsStatus)
     ? (value as ResultsStatus)
     : "all"
+}
+
+function cleanSearchQuery(query: string) {
+  return query.trim().replaceAll(",", " ")
 }
 
 export async function getResultsStats() {
@@ -72,21 +94,17 @@ export async function getResultsStats() {
   }
 }
 
-export async function getResultsPage(params: {
-  query?: string
-  page?: string | number
-  sort?: string
-  status?: string
-}) {
+export async function getResultsPage(params: ResultsPageParams) {
   const supabase = await createClient()
 
-  const query = String(params.query ?? "").trim()
+  const query = cleanSearchQuery(String(params.query ?? ""))
   const page = normalizePage(params.page)
+  const pageSize = normalizePageSize(params.pageSize)
   const sort = normalizeSort(params.sort)
   const status = normalizeStatus(params.status)
 
-  const from = (page - 1) * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let applicantIds: number[] = []
   let scheduleIds: number[] = []
@@ -103,15 +121,15 @@ export async function getResultsPage(params: {
             `last_name.ilike.%${query}%`,
             `reference_number.ilike.%${query}%`,
             `email.ilike.%${query}%`,
-          ].join(",")
+          ].join(","),
         )
-        .limit(100),
+        .limit(500),
 
       supabase
         .from("test_schedules")
         .select("id")
         .ilike("name", `%${query}%`)
-        .limit(100),
+        .limit(500),
     ])
 
     if (applicantResult.error) {
@@ -130,7 +148,7 @@ export async function getResultsPage(params: {
         rows: [],
         total: 0,
         page: 1,
-        pageSize: PAGE_SIZE,
+        pageSize,
         totalPages: 1,
         query,
         sort,
@@ -146,7 +164,9 @@ export async function getResultsPage(params: {
   let dataQuery = supabase.from("results").select(`
     id,
     overall_percentage,
+    remarks,
     is_published,
+    published_at,
     created_at,
     applicants (
       id,
@@ -176,7 +196,7 @@ export async function getResultsPage(params: {
   if (query) {
     if (applicantIds.length > 0 && scheduleIds.length > 0) {
       const filter = `applicant_id.in.(${applicantIds.join(
-        ","
+        ",",
       )}),test_schedule_id.in.(${scheduleIds.join(",")})`
 
       countQuery = countQuery.or(filter)
@@ -228,13 +248,15 @@ export async function getResultsPage(params: {
   }
 
   const total = countResult.count ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(page, totalPages)
 
   return {
     rows: dataResult.data ?? [],
     total,
-    page,
-    pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    page: safePage,
+    pageSize,
+    totalPages,
     query,
     sort,
     status,
@@ -242,7 +264,7 @@ export async function getResultsPage(params: {
 }
 
 export async function toggleResultPublish(
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
@@ -258,7 +280,10 @@ export async function toggleResultPublish(
 
   const { error } = await supabase
     .from("results")
-    .update({ is_published: nextValue })
+    .update({
+      is_published: nextValue,
+      published_at: nextValue ? new Date().toISOString() : null,
+    })
     .eq("id", id)
 
   if (error) {
@@ -269,6 +294,7 @@ export async function toggleResultPublish(
   }
 
   revalidatePath("/admin/results")
+  revalidatePath("/admin/publish-results")
   revalidatePath("/admin/dashboard")
 
   return {
@@ -301,6 +327,7 @@ export async function deleteResult(formData: FormData): Promise<ActionResult> {
   }
 
   revalidatePath("/admin/results")
+  revalidatePath("/admin/publish-results")
   revalidatePath("/admin/dashboard")
 
   return {
