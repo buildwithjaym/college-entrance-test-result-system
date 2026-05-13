@@ -1,63 +1,164 @@
 "use client"
 
+import { useEffect } from "react"
+import { toast } from "sonner"
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
+  Bar,
+  BarChart,
   CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
   Cell,
   Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts"
 
 type DashboardChartsProps = {
   stats: {
+    totalResults: number
     publishedResults: number
     unpublishedResults: number
+    averageScore: number
   }
   trends: Array<{
     label: string
     average: number
+  }>
+  batchBreakdown: Array<{
+    batch: string
+    released: number
+    pending: number
+  }>
+  qualifierData: Array<{
+    name: string
+    value: number
   }>
 }
 
 const RED = "#b91c1c"
 const GREEN = "#16a34a"
 const AMBER = "#f59e0b"
+const SLATE = "#64748b"
 const GRID = "#e5e7eb"
 
-export function DashboardCharts({ stats, trends }: DashboardChartsProps) {
-  const publicationData = [
-    { name: "Published", value: stats.publishedResults },
+const tooltipStyle = {
+  borderRadius: 16,
+  border: `1px solid ${GRID}`,
+  boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
+}
+
+export function DashboardCharts({
+  stats,
+  trends,
+  batchBreakdown,
+  qualifierData,
+}: DashboardChartsProps) {
+  const releaseData = [
+    { name: "Released", value: stats.publishedResults },
     { name: "Pending", value: stats.unpublishedResults },
   ]
 
-  const hasPublicationData = publicationData.some((item) => item.value > 0)
+  const hasReleaseData = releaseData.some((item) => item.value > 0)
+  const hasQualifierData = qualifierData.some((item) => item.value > 0)
+  const hasBatchData = batchBreakdown.length > 0
+  const hasTrendData = trends.length > 0
+
+  useEffect(() => {
+    if (stats.totalResults === 0) return
+
+    if (stats.unpublishedResults > 0) {
+      toast.warning(`${stats.unpublishedResults} result(s) are still pending.`)
+      return
+    }
+
+    toast.success("All generated results are already released.")
+  }, [stats.totalResults, stats.unpublishedResults])
 
   return (
-    <div className="grid gap-6">
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-5">
-          <p className="font-bold text-gray-950">Average Performance Trend</p>
-          <p className="mt-1 text-sm text-gray-500">
-            Average result percentage per recent test schedule.
-          </p>
-        </div>
+    <section className="grid grid-cols-1 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Qualifiers vs Non-Qualifiers"
+          description="Applicants with 35% and above are Qualifiers. Below 35% are Non-Qualifiers."
+        >
+          {!hasQualifierData ? (
+            <EmptyChart message="No qualification data available." />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={qualifierData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius="58%"
+                  outerRadius="82%"
+                  paddingAngle={5}
+                >
+                  <Cell fill={GREEN} />
+                  <Cell fill={SLATE} />
+                </Pie>
 
-        <div className="h-[280px] sm:h-[340px]">
-          {trends.length === 0 ? (
-            <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm text-gray-500">
-              No trend data available.
-            </div>
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend
+                  verticalAlign="bottom"
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: "12px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Release Breakdown"
+          description="Shows how many result records are already released and still pending."
+        >
+          {!hasReleaseData ? (
+            <EmptyChart message="No release data available." />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={releaseData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius="58%"
+                  outerRadius="82%"
+                  paddingAngle={5}
+                >
+                  <Cell fill={GREEN} />
+                  <Cell fill={AMBER} />
+                </Pie>
+
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend
+                  verticalAlign="bottom"
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: "12px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <ChartCard
+          title="Average Performance Trend"
+          description="Average result percentage per recent test schedule."
+        >
+          {!hasTrendData ? (
+            <EmptyChart message="No trend data available." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={trends}
-                margin={{ top: 10, right: 14, left: -18, bottom: 0 }}
+                margin={{ top: 10, right: 16, left: -18, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis
@@ -74,11 +175,7 @@ export function DashboardCharts({ stats, trends }: DashboardChartsProps) {
                 />
                 <Tooltip
                   formatter={(value) => [`${Number(value)}%`, "Average"]}
-                  contentStyle={{
-                    borderRadius: 16,
-                    border: `1px solid ${GRID}`,
-                    boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
-                  }}
+                  contentStyle={tooltipStyle}
                 />
                 <Line
                   type="monotone"
@@ -91,54 +188,88 @@ export function DashboardCharts({ stats, trends }: DashboardChartsProps) {
               </LineChart>
             </ResponsiveContainer>
           )}
-        </div>
-      </section>
+        </ChartCard>
 
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-5">
-          <p className="font-bold text-gray-950">Publication Breakdown</p>
-          <p className="mt-1 text-sm text-gray-500">
-            Published versus pending result records.
-          </p>
-        </div>
-
-        <div className="h-[280px] sm:h-[330px]">
-          {!hasPublicationData ? (
-            <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm text-gray-500">
-              No publication data available.
-            </div>
+        <ChartCard
+          title="Results Per Batch"
+          description="Compares released and pending records by test batch."
+        >
+          {!hasBatchData ? (
+            <EmptyChart message="No batch data available." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={publicationData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="60%"
-                  outerRadius="82%"
-                  paddingAngle={4}
-                >
-                  <Cell fill={GREEN} />
-                  <Cell fill={AMBER} />
-                </Pie>
-
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 16,
-                    border: `1px solid ${GRID}`,
-                    boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
-                  }}
+              <BarChart
+                data={batchBreakdown}
+                margin={{ top: 10, right: 16, left: -18, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis
+                  dataKey="batch"
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
                 />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={tooltipStyle} />
                 <Legend
-                  verticalAlign="bottom"
                   iconType="circle"
                   wrapperStyle={{ fontSize: "12px" }}
                 />
-              </PieChart>
+                <Bar
+                  dataKey="released"
+                  name="Released"
+                  fill={GREEN}
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar
+                  dataKey="pending"
+                  name="Pending"
+                  fill={AMBER}
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
             </ResponsiveContainer>
           )}
-        </div>
-      </section>
+        </ChartCard>
+      </div>
+    </section>
+  )
+}
+
+function ChartCard({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-3xl sm:p-6">
+      <div className="mb-5">
+        <p className="text-sm font-bold text-slate-950 sm:text-base">
+          {title}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+          {description}
+        </p>
+      </div>
+
+      <div className="h-[260px] sm:h-[320px] lg:h-[360px]">{children}</div>
+    </div>
+  )
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="flex h-full items-center justify-center rounded-2xl bg-slate-50 px-4 text-center text-sm text-slate-500">
+      {message}
     </div>
   )
 }
