@@ -18,6 +18,17 @@ export type RecentDashboardResult = {
   exam_date: string | null
 }
 
+export type DashboardTrend = {
+  label: string
+  average: number
+}
+
+export type DashboardBatchBreakdown = {
+  batch: string
+  released: number
+  pending: number
+}
+
 function normalizeStats(data: unknown): DashboardStats {
   const stats = data as Partial<DashboardStats> | null
 
@@ -47,6 +58,17 @@ function formatApplicantName(applicant: {
   return name || "Unknown Applicant"
 }
 
+function formatScheduleLabel(name?: string | null, date?: string | null) {
+  if (name) return name
+
+  if (!date) return "No Schedule"
+
+  return new Date(date).toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+  })
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient()
 
@@ -67,7 +89,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function getRecentDashboardResults(
-  limit = 5
+  limit = 5,
 ): Promise<RecentDashboardResult[]> {
   const supabase = await createClient()
 
@@ -89,7 +111,7 @@ export async function getRecentDashboardResults(
         name,
         exam_date
       )
-    `
+    `,
     )
     .order("created_at", { ascending: false })
     .limit(limit)
@@ -121,9 +143,110 @@ export async function getRecentDashboardResults(
   })
 }
 
+export async function getDashboardChartData(): Promise<{
+  trends: DashboardTrend[]
+  batchBreakdown: DashboardBatchBreakdown[]
+}> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("results")
+    .select(
+      `
+      overall_percentage,
+      is_published,
+      test_schedules (
+        name,
+        exam_date
+      )
+    `,
+    )
+
+  if (error) {
+    console.error("getDashboardChartData error:", error.message)
+
+    return {
+      trends: [],
+      batchBreakdown: [],
+    }
+  }
+
+  const grouped = new Map<
+    string,
+    {
+      batch: string
+      totalScore: number
+      totalCount: number
+      released: number
+      pending: number
+      examDate: string | null
+    }
+  >()
+
+  for (const row of data ?? []) {
+    const schedule = Array.isArray(row.test_schedules)
+      ? row.test_schedules[0]
+      : row.test_schedules
+
+    const batch = formatScheduleLabel(schedule?.name, schedule?.exam_date)
+
+    const existing =
+      grouped.get(batch) ??
+      {
+        batch,
+        totalScore: 0,
+        totalCount: 0,
+        released: 0,
+        pending: 0,
+        examDate: schedule?.exam_date ?? null,
+      }
+
+    existing.totalScore += Number(row.overall_percentage ?? 0)
+    existing.totalCount += 1
+
+    if (row.is_published) {
+      existing.released += 1
+    } else {
+      existing.pending += 1
+    }
+
+    grouped.set(batch, existing)
+  }
+
+  const sortedGroups = Array.from(grouped.values()).sort((a, b) => {
+    if (!a.examDate && !b.examDate) return a.batch.localeCompare(b.batch)
+    if (!a.examDate) return 1
+    if (!b.examDate) return -1
+
+    return new Date(a.examDate).getTime() - new Date(b.examDate).getTime()
+  })
+
+  const trends = sortedGroups.map((item) => ({
+    label: item.batch,
+    average:
+      item.totalCount > 0
+        ? Math.round(item.totalScore / item.totalCount)
+        : 0,
+  }))
+
+  const batchBreakdown = sortedGroups.map((item) => ({
+    batch: item.batch,
+    released: item.released,
+    pending: item.pending,
+  }))
+
+  return {
+    trends,
+    batchBreakdown,
+  }
+}
+
 export async function getDashboardData() {
-  const stats = await getDashboardStats()
-  const recentResults = await getRecentDashboardResults()
+  const [stats, recentResults, chartData] = await Promise.all([
+    getDashboardStats(),
+    getRecentDashboardResults(),
+    getDashboardChartData(),
+  ])
 
   const releaseRate =
     stats.totalResults > 0
@@ -134,5 +257,7 @@ export async function getDashboardData() {
     stats,
     recentResults,
     releaseRate,
+    trends: chartData.trends,
+    batchBreakdown: chartData.batchBreakdown,
   }
 }
