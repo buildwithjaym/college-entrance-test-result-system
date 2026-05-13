@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server"
 type SearchApplicantsParams = {
   query?: string
   schoolYearId?: number | null
-  limit?: number
+  page?: number
+  pageSize?: number
 }
 
 export type SchoolYearRow = {
@@ -51,14 +52,34 @@ export type ApplicantRow = {
   exam_date: string | null
 }
 
+export type PaginatedApplicantRows = {
+  rows: ApplicantRow[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 function normalizePercentage(value: FormDataEntryValue | null) {
   const parsed = Number(value ?? 0)
 
-  if (!Number.isFinite(parsed)) {
-    return 0
-  }
+  if (!Number.isFinite(parsed)) return 0
 
   return Math.max(0, Math.min(100, parsed))
+}
+
+function buildFullName(applicant: {
+  first_name?: string | null
+  middle_name?: string | null
+  last_name?: string | null
+}) {
+  return [applicant.first_name, applicant.middle_name, applicant.last_name]
+    .filter(Boolean)
+    .join(" ")
+}
+
+function cleanSearchQuery(query: string) {
+  return query.trim().replaceAll(",", " ")
 }
 
 export async function getPublishResultsContext(): Promise<{
@@ -80,27 +101,22 @@ export async function getPublishResultsContext(): Promise<{
       .from("test_schedules")
       .select(
         `
+        id,
+        school_year_id,
+        name,
+        exam_date,
+        school_years (
           id,
-          school_year_id,
-          name,
-          exam_date,
-          school_years (
-            id,
-            label,
-            is_active
-          )
-        `
+          label,
+          is_active
+        )
+      `,
       )
       .order("exam_date", { ascending: false }),
   ])
 
-  if (schoolYearsError) {
-    throw new Error(schoolYearsError.message)
-  }
-
-  if (schedulesError) {
-    throw new Error(schedulesError.message)
-  }
+  if (schoolYearsError) throw new Error(schoolYearsError.message)
+  if (schedulesError) throw new Error(schedulesError.message)
 
   const safeSchoolYears: SchoolYearRow[] = (schoolYears ?? []).map((item) => ({
     id: Number(item.id),
@@ -129,26 +145,33 @@ export async function getPublishResultsContext(): Promise<{
 export async function searchApplicantsForPublishing({
   query = "",
   schoolYearId,
-  limit = 20,
-}: SearchApplicantsParams): Promise<ApplicantRow[]> {
+  page = 1,
+  pageSize = 20,
+}: SearchApplicantsParams): Promise<PaginatedApplicantRows> {
   const supabase = await createClient()
-  const cleanQuery = query.trim()
+
+  const safePage = Math.max(1, page)
+  const safePageSize = Math.min(Math.max(10, pageSize), 100)
+  const from = (safePage - 1) * safePageSize
+  const to = from + safePageSize - 1
+  const cleanQuery = cleanSearchQuery(query)
 
   let applicantsQuery = supabase
     .from("applicants")
     .select(
       `
-        id,
-        reference_number,
-        first_name,
-        middle_name,
-        last_name,
-        email,
-        created_at
-      `
+      id,
+      reference_number,
+      first_name,
+      middle_name,
+      last_name,
+      email,
+      created_at
+    `,
+      { count: "exact" },
     )
     .order("created_at", { ascending: false })
-    .limit(limit)
+    .range(from, to)
 
   if (cleanQuery) {
     applicantsQuery = applicantsQuery.or(
@@ -158,15 +181,14 @@ export async function searchApplicantsForPublishing({
         `last_name.ilike.%${cleanQuery}%`,
         `reference_number.ilike.%${cleanQuery}%`,
         `email.ilike.%${cleanQuery}%`,
-      ].join(",")
+      ].join(","),
     )
   }
 
-  const { data: applicants, error: applicantsError } = await applicantsQuery
+  const { data: applicants, error: applicantsError, count } =
+    await applicantsQuery
 
-  if (applicantsError) {
-    throw new Error(applicantsError.message)
-  }
+  if (applicantsError) throw new Error(applicantsError.message)
 
   const safeApplicants = applicants ?? []
   const applicantIds = safeApplicants.map((item) => Number(item.id))
@@ -187,24 +209,22 @@ export async function searchApplicantsForPublishing({
       .from("results")
       .select(
         `
+        id,
+        applicant_id,
+        is_published,
+        overall_percentage,
+        test_schedules (
           id,
-          applicant_id,
-          is_published,
-          overall_percentage,
-          test_schedules (
-            id,
-            name,
-            exam_date
-          )
-        `
+          name,
+          exam_date
+        )
+      `,
       )
       .eq("school_year_id", schoolYearId)
       .in("applicant_id", applicantIds)
       .order("created_at", { ascending: false })
 
-    if (resultsError) {
-      throw new Error(resultsError.message)
-    }
+    if (resultsError) throw new Error(resultsError.message)
 
     resultsMap = new Map(
       (existingResults ?? []).map((item) => {
@@ -222,12 +242,13 @@ export async function searchApplicantsForPublishing({
             exam_date: schedule?.exam_date ?? null,
           },
         ]
-      })
+      }),
     )
   }
 
-  return safeApplicants.map((applicant) => {
+  const rows = safeApplicants.map((applicant) => {
     const existing = resultsMap.get(Number(applicant.id))
+    const fullName = buildFullName(applicant)
 
     return {
       id: Number(applicant.id),
@@ -237,13 +258,7 @@ export async function searchApplicantsForPublishing({
       last_name: applicant.last_name ?? null,
       email: applicant.email ?? null,
       created_at: String(applicant.created_at),
-      full_name: [
-        applicant.first_name,
-        applicant.middle_name,
-        applicant.last_name,
-      ]
-        .filter(Boolean)
-        .join(" "),
+      full_name: fullName || "Unnamed Applicant",
       has_result: Boolean(existing),
       result_id: existing?.id ?? null,
       is_published: existing?.is_published ?? false,
@@ -252,28 +267,31 @@ export async function searchApplicantsForPublishing({
       exam_date: existing?.exam_date ?? null,
     }
   })
+
+  const total = count ?? 0
+
+  return {
+    rows,
+    total,
+    page: safePage,
+    pageSize: safePageSize,
+    totalPages: Math.max(1, Math.ceil(total / safePageSize)),
+  }
 }
 
-export async function createOrUpdateResult(
-  formData: FormData
-): Promise<void> {
+export async function createOrUpdateResult(formData: FormData): Promise<void> {
   const supabase = await createClient()
 
   const applicantId = Number(formData.get("applicant_id"))
   const testScheduleId = Number(formData.get("test_schedule_id"))
   const overallPercentage = normalizePercentage(
-    formData.get("overall_percentage")
+    formData.get("overall_percentage"),
   )
   const remarks = String(formData.get("remarks") ?? "").trim()
   const publishNow = String(formData.get("publish_now") ?? "") === "true"
 
-  if (!applicantId) {
-    throw new Error("Applicant is required.")
-  }
-
-  if (!testScheduleId) {
-    throw new Error("Test schedule is required.")
-  }
+  if (!applicantId) throw new Error("Applicant is required.")
+  if (!testScheduleId) throw new Error("Test schedule is required.")
 
   const { data: schedule, error: scheduleError } = await supabase
     .from("test_schedules")
@@ -281,10 +299,7 @@ export async function createOrUpdateResult(
     .eq("id", testScheduleId)
     .single()
 
-  if (scheduleError) {
-    throw new Error(scheduleError.message)
-  }
-
+  if (scheduleError) throw new Error(scheduleError.message)
   if (!schedule?.school_year_id) {
     throw new Error("Selected schedule has no school year.")
   }
@@ -306,12 +321,9 @@ export async function createOrUpdateResult(
     .select("id")
     .eq("applicant_id", applicantId)
     .eq("school_year_id", schoolYearId)
-    .eq("test_schedule_id", testScheduleId)
     .maybeSingle()
 
-  if (existingError) {
-    throw new Error(existingError.message)
-  }
+  if (existingError) throw new Error(existingError.message)
 
   if (existingResult) {
     const { error: updateError } = await supabase
@@ -319,17 +331,11 @@ export async function createOrUpdateResult(
       .update(payload)
       .eq("id", Number(existingResult.id))
 
-    if (updateError) {
-      throw new Error(updateError.message)
-    }
+    if (updateError) throw new Error(updateError.message)
   } else {
-    const { error: insertError } = await supabase
-      .from("results")
-      .insert(payload)
+    const { error: insertError } = await supabase.from("results").insert(payload)
 
-    if (insertError) {
-      throw new Error(insertError.message)
-    }
+    if (insertError) throw new Error(insertError.message)
   }
 
   revalidatePath("/admin/publish-results")
@@ -337,17 +343,13 @@ export async function createOrUpdateResult(
   revalidatePath("/admin/dashboard")
 }
 
-export async function togglePublishResult(
-  formData: FormData
-): Promise<void> {
+export async function togglePublishResult(formData: FormData): Promise<void> {
   const supabase = await createClient()
 
   const resultId = Number(formData.get("result_id"))
   const nextValue = String(formData.get("next_value")) === "true"
 
-  if (!resultId) {
-    throw new Error("Result ID is required.")
-  }
+  if (!resultId) throw new Error("Result ID is required.")
 
   const { error } = await supabase
     .from("results")
@@ -357,9 +359,7 @@ export async function togglePublishResult(
     })
     .eq("id", resultId)
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error) throw new Error(error.message)
 
   revalidatePath("/admin/publish-results")
   revalidatePath("/admin/results")
