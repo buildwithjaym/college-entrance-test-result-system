@@ -5,8 +5,8 @@ import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 const EXPORT_WIDTH = 1600
-const EXPORT_HEIGHT = 800
-const EXPORT_SCALE = 2
+const EXPORT_HEIGHT = 830
+const EXPORT_SCALE = 4
 
 function sanitizeFileName(value: string) {
   return value
@@ -29,7 +29,7 @@ function getMeta(source: HTMLElement) {
   }
 }
 
-async function waitForImages(doc: Document, timeoutMs = 15000) {
+async function waitForImages(doc: Document, timeoutMs = 20000) {
   const images = Array.from(doc.images)
 
   if (!images.length) return
@@ -101,7 +101,7 @@ function createExportIframe(html: string) {
       height: ${EXPORT_HEIGHT}px;
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow: visible;
       background: #ffffff;
       font-family: "Times New Roman", Times, serif;
     }
@@ -125,7 +125,7 @@ function createExportIframe(html: string) {
     #capture-root {
       width: ${EXPORT_WIDTH}px;
       height: ${EXPORT_HEIGHT}px;
-      overflow: hidden;
+      overflow: visible;
       background: #ffffff;
     }
 
@@ -134,8 +134,9 @@ function createExportIframe(html: string) {
       height: ${EXPORT_HEIGHT}px !important;
       min-width: ${EXPORT_WIDTH}px !important;
       min-height: ${EXPORT_HEIGHT}px !important;
-      overflow: hidden !important;
+      overflow: visible !important;
       transform: none !important;
+      background: #ffffff !important;
     }
   </style>
 </head>
@@ -193,7 +194,7 @@ async function createPngBlob(source: HTMLElement) {
       windowHeight: EXPORT_HEIGHT,
       scrollX: 0,
       scrollY: 0,
-      imageTimeout: 15000,
+      imageTimeout: 20000,
       foreignObjectRendering: false,
       removeContainer: true,
       onclone: (clonedDoc) => {
@@ -202,7 +203,9 @@ async function createPngBlob(source: HTMLElement) {
         if (sheet) {
           sheet.style.width = `${EXPORT_WIDTH}px`
           sheet.style.height = `${EXPORT_HEIGHT}px`
-          sheet.style.overflow = "hidden"
+          sheet.style.minHeight = `${EXPORT_HEIGHT}px`
+          sheet.style.overflow = "visible"
+          sheet.style.background = "#ffffff"
         }
       },
     })
