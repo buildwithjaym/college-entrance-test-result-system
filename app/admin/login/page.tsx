@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,7 +13,7 @@ import {
   XCircle,
 } from "lucide-react"
 
-import { createClient } from "@/lib/supabase/client"
+import { adminLoginAction } from "./actions"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -27,13 +26,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function AdminLoginPage() {
-  const router = useRouter()
-  const supabase = createClient()
-
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [toast, setToast] = useState<{
     type: "success" | "error"
     message: string
@@ -41,35 +35,19 @@ export default function AdminLoginPage() {
 
   function showToast(type: "success" | "error", message: string) {
     setToast({ type, message })
-    window.setTimeout(() => setToast(null), 3500)
+    window.setTimeout(() => setToast(null), 4000)
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      const result = await adminLoginAction(formData)
 
-    if (!email.trim() || !password.trim()) {
-      showToast("error", "Please enter your email and password.")
-      return
-    }
-
-    setLoading(true)
-    showToast("success", "Checking your admin credentials...")
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
+      if (result && !result.success) {
+        showToast("error", result.message)
+      } else {
+        showToast("success", "Login successful. Opening dashboard...")
+      }
     })
-
-    if (error) {
-      setLoading(false)
-      showToast("error", "Invalid email or password.")
-      return
-    }
-
-    showToast("success", "Login successful. Redirecting to dashboard...")
-
-    router.push("/admin/dashboard")
-    router.refresh()
   }
 
   return (
@@ -93,42 +71,16 @@ export default function AdminLoginPage() {
             </h1>
 
             <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
-              Manage school years, exam schedules, applicants, result records,
-              publishing, and analytics from one admin workspace.
+              Only authorized admin accounts can enter the administration panel.
+              Failed login attempts are temporarily limited for security.
             </p>
-
-            <div className="mt-8 grid gap-4">
-              <div className="rounded-2xl border border-primary/10 bg-background/80 p-4 shadow-sm">
-                <p className="font-medium text-foreground">
-                  Fast result management
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Review, filter, release, and monitor CET results with a cleaner
-                  workflow.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-primary/10 bg-background/80 p-4 shadow-sm">
-                <p className="font-medium text-foreground">
-                  Controlled publishing
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Release official results only when the testing center is ready.
-                </p>
-              </div>
-            </div>
           </section>
 
           <section className="flex items-center justify-center">
             <Card className="w-full max-w-md rounded-[2rem] border border-primary/15 bg-background/95 shadow-2xl backdrop-blur">
               <CardHeader className="space-y-4 pb-2">
                 <div className="flex items-center justify-between">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 rounded-full px-3"
-                  >
+                  <Button asChild variant="ghost" size="sm" className="gap-2 rounded-full px-3">
                     <Link href="/">
                       <ArrowLeft className="h-4 w-4" />
                       Back
@@ -145,53 +97,46 @@ export default function AdminLoginPage() {
                     Admin Login
                   </CardTitle>
                   <CardDescription className="text-sm leading-6">
-                    Sign in to access the CET Result System administration
-                    panel.
+                    Sign in using your authorized admin credentials.
                   </CardDescription>
                 </div>
               </CardHeader>
 
               <CardContent className="pt-4">
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form action={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Email Address
-                    </Label>
+                    <Label htmlFor="email">Email Address</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
                       placeholder="admin@school.edu"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
                       autoComplete="email"
                       required
-                      disabled={loading}
+                      disabled={isPending}
                       className="h-12 rounded-xl border-primary/10 bg-background shadow-sm focus-visible:ring-primary"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">
-                      Password
-                    </Label>
+                    <Label htmlFor="password">Password</Label>
 
                     <div className="relative">
                       <Input
                         id="password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
                         autoComplete="current-password"
                         required
-                        disabled={loading}
+                        disabled={isPending}
                         className="h-12 rounded-xl border-primary/10 bg-background pr-12 shadow-sm focus-visible:ring-primary"
                       />
 
                       <button
                         type="button"
                         onClick={() => setShowPassword((value) => !value)}
-                        disabled={loading}
+                        disabled={isPending}
                         className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-60"
                       >
                         {showPassword ? (
@@ -206,12 +151,12 @@ export default function AdminLoginPage() {
                   <Button
                     type="submit"
                     className="h-12 w-full rounded-xl bg-primary text-primary-foreground shadow-lg transition hover:bg-primary/90"
-                    disabled={loading}
+                    disabled={isPending}
                   >
-                    {loading ? (
+                    {isPending ? (
                       <span className="inline-flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Signing in...
+                        Checking credentials...
                       </span>
                     ) : (
                       "Sign in to Dashboard"
@@ -220,8 +165,7 @@ export default function AdminLoginPage() {
                 </form>
 
                 <div className="mt-6 text-center text-xs leading-5 text-muted-foreground">
-                  Authorized personnel only. All access activity may be monitored
-                  for security and audit purposes.
+                  After 5 wrong attempts, login will be locked for 30 seconds.
                 </div>
               </CardContent>
             </Card>
