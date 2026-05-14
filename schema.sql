@@ -219,3 +219,17 @@ on public.result_verification_logs using btree (status);
 
 alter table public.result_verifications enable row level security;
 alter table public.result_verification_logs enable row level security;
+
+
+
+drop policy if exists "Public can view active result verifications"
+on public.result_verifications;
+
+create policy "Public can view active result verifications"
+on public.result_verifications
+for select
+to anon, authenticated
+using (
+  is_active = true
+  and revoked_at is null
+);

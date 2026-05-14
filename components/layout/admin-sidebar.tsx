@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  QrCode,
   UploadCloud,
   Users,
   X,
@@ -37,6 +38,7 @@ const navSections = [
     title: "Monitoring",
     items: [
       { label: "Reports & Analytics", href: "/admin/reports", icon: FileBarChart2 },
+      { label: "QR Scanner", href: "/admin/qr-scanner", icon: QrCode },
     ],
   },
   {

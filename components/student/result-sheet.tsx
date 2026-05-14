@@ -19,7 +19,7 @@ type ResultSheetProps = {
 function getQrUrl(value?: string) {
   if (!value) return ""
 
-  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+  return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=${encodeURIComponent(
     value,
   )}`
 }
@@ -82,6 +82,7 @@ export function ResultSheet({
           boxSizing: "border-box",
           fontFamily: '"Times New Roman", Times, serif',
           color: "#0f172a",
+          overflow: "hidden",
         }}
       >
         <div
@@ -92,6 +93,7 @@ export function ResultSheet({
             padding: "12px",
             boxSizing: "border-box",
             background: "#ffffff",
+            overflow: "hidden",
           }}
         >
           <div
@@ -100,7 +102,7 @@ export function ResultSheet({
               width: "100%",
               height: "100%",
               border: "2px solid #93c5fd",
-              padding: "36px 42px 24px",
+              padding: "34px 42px 18px",
               boxSizing: "border-box",
               overflow: "hidden",
               background: "#ffffff",
@@ -202,7 +204,7 @@ export function ResultSheet({
               <div style={{ textAlign: "center" }}>
                 <h1
                   style={{
-                    margin: "52px 0 0",
+                    margin: "42px 0 0",
                     fontSize: "52px",
                     lineHeight: 1.08,
                     fontWeight: 700,
@@ -218,7 +220,7 @@ export function ResultSheet({
 
                 <p
                   style={{
-                    margin: "42px 0 0",
+                    margin: "34px 0 0",
                     fontSize: "42px",
                     fontWeight: 700,
                     textTransform: "uppercase",
@@ -236,7 +238,7 @@ export function ResultSheet({
 
                 <p
                   style={{
-                    margin: "34px 0 0",
+                    margin: "28px 0 0",
                     fontSize: "30px",
                     fontWeight: 700,
                     textTransform: "uppercase",
@@ -248,8 +250,8 @@ export function ResultSheet({
 
                 <p
                   style={{
-                    margin: "14px 0 0",
-                    fontSize: "82px",
+                    margin: "12px 0 0",
+                    fontSize: "78px",
                     fontWeight: 700,
                     color: "#dc2626",
                     lineHeight: 1,
@@ -261,16 +263,16 @@ export function ResultSheet({
 
               <div
                 style={{
-                  marginTop: "42px",
+                  marginTop: "28px",
                   borderTop: "1px solid #bfdbfe",
-                  paddingTop: "16px",
+                  paddingTop: "14px",
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "28px",
                   alignItems: "end",
                 }}
               >
-                <div style={{ fontSize: "16px", lineHeight: 1.65 }}>
+                <div style={{ fontSize: "16px", lineHeight: 1.55 }}>
                   <p style={{ margin: 0 }}>
                     <strong>Valid until:</strong>{" "}
                     {schoolYearLabel ? `${schoolYearLabel} only` : "Not available"}
@@ -288,7 +290,7 @@ export function ResultSheet({
                     </p>
                   ) : null}
 
-                  <p style={{ margin: "10px 0 0", fontSize: "13px", lineHeight: 1.55 }}>
+                  <p style={{ margin: "8px 0 0", fontSize: "13px", lineHeight: 1.45 }}>
                     This CET result is subject to official verification by the
                     Testing and Evaluation Center.
                   </p>
@@ -321,8 +323,9 @@ export function ResultSheet({
 
               <div
                 style={{
-                  marginTop: "12px",
-                  paddingTop: "8px",
+                  marginTop: "8px",
+                  paddingTop: "6px",
+                  minHeight: "92px",
                   borderTop: "1px dashed #cbd5e1",
                   display: "flex",
                   justifyContent: "space-between",
@@ -352,11 +355,11 @@ export function ResultSheet({
                     <ExportImg
                       src={qrUrl}
                       alt="Verification QR"
-                      width={68}
-                      height={68}
+                      width={84}
+                      height={84}
                       style={{
-                        width: "68px",
-                        height: "68px",
+                        width: "84px",
+                        height: "84px",
                       }}
                     />
                   </a>
@@ -511,7 +514,7 @@ export function ResultSheet({
                 </div>
               </div>
 
-              <div className="mt-5 border-t border-dashed border-slate-200 pt-3">
+              <div className="mt-4 min-h-[104px] border-t border-dashed border-slate-200 pt-2">
                 <div className="flex items-center justify-between">
                   <div className="text-[8px] text-slate-500 md:text-[12px]">
                     <p>
@@ -538,9 +541,9 @@ export function ResultSheet({
                       <img
                         src={qrUrl}
                         alt="Verification QR"
-                        width={58}
-                        height={58}
-                        className="h-[58px] w-[58px]"
+                        width={88}
+                        height={88}
+                        className="h-[88px] w-[88px]"
                       />
                     </a>
                   ) : null}
