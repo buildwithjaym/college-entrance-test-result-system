@@ -160,3 +160,182 @@ For educational and institutional use.
 ## 💬 Final Note
 
 The CET Result System is designed to provide a more efficient, secure, and student-centered experience—ensuring that every student can access their results with confidence, convenience, and reliability.
+
+
+
+
+
+
+
+This is the BEST way your BASC CET result should look visually.
+
+Modern universities now place the verification section at the bottom-right or bottom-center of the result/certificate. QR-based verification is already widely used by schools and universities to fight fake results and forged documents.
+
+THIS IS THE IDEAL LAYOUT
+ ------------------------------------------------------
+|                                                      |
+|              BASILAN STATE COLLEGE                   |
+|          TESTING AND EVALUATION CENTER               |
+|                                                      |
+|          COLLEGE ENTRANCE TEST RESULT                |
+|                                                      |
+|                 JUAN DELA CRUZ                       |
+|                                                      |
+|              OVERALL ABILITY RATING                  |
+|                        87%                           |
+|                                                      |
+|------------------------------------------------------|
+| Valid until: SY 2025-2026                            |
+| Date Examined: March 10, 2026                        |
+| Reference No: CET-2026-0001                          |
+|                                                      |
+| Verification Code: BASC-X91A-K2L                    |
+|                                                      |
+| This document can be verified online                 |
+| Scan QR or visit: basc.edu.ph/verify                 |
+|                                                      |
+|                     [ QR CODE ]                      |
+|                                                      |
+|                    VERIFIED ✓                        |
+ ------------------------------------------------------
+WHAT THE QR SHOULD DO
+
+When scanned:
+
+https://basc.edu.ph/verify/8fd91ab2x
+
+Then your verification page opens.
+
+WHAT THE VERIFICATION PAGE SHOULD LOOK LIKE
+
+This is what admin/employers see after scanning:
+
+ ------------------------------------------------------
+|                RESULT VERIFICATION                   |
+|                                                      |
+|                 VERIFIED AUTHENTIC ✓                 |
+|                                                      |
+| Applicant Name: Juan Dela Cruz                       |
+| Reference No: CET-2026-0001                          |
+| Score: 87%                                           |
+| Status: QUALIFIER                                    |
+| Date Published: March 15, 2026                       |
+|                                                      |
+| Verification Token: 8fd91ab2x                        |
+|                                                      |
+| Verified by: BASC Testing and Evaluation Center      |
+ ------------------------------------------------------
+
+If fake:
+
+ ------------------------------------------------------
+|                 INVALID RESULT ✕                     |
+|                                                      |
+| This document does not exist in the                  |
+| official BASC CET verification database.             |
+ ------------------------------------------------------
+BEST POSITIONING INSIDE YOUR RESULT SHEET
+
+I recommend:
+
+Bottom-right corner
+
+Like this:
+
+ -----------------------------
+| Note...                     |
+|                              |
+|                [ QR CODE ]   |
+|                              |
+| Verify Online                |
+| basc.edu.ph/verify           |
+ -----------------------------
+
+This is the most professional placement.
+
+WHAT SHOULD BE HIDDEN
+
+DO NOT expose:
+
+secret admin key
+verification hash
+encryption
+signing algorithm
+
+Only the backend knows those.
+
+The QR only contains:
+
+token
+verification URL
+WHAT SHOULD BE VISIBLE
+
+Visible to everyone:
+
+✅ QR Code
+✅ Verification Code
+✅ Reference Number
+✅ Verification URL
+✅ Published Timestamp
+
+That’s enough for professional verification.
+
+WHAT THE SECRET VALIDATION LOOKS LIKE
+
+Hidden backend process:
+
+hash(
+ applicant_id +
+ score +
+ published_at +
+ SECRET_ADMIN_KEY
+)
+
+If hash matches:
+✅ authentic
+
+If changed:
+❌ fake/tampered
+
+The user NEVER sees this.
+
+BEST UI FOR YOUR SYSTEM
+
+I strongly recommend adding:
+
+Inside result sheet footer
+This result can be verified online.
+Scan the QR code to confirm authenticity.
+
+Then:
+
+QR code
+verification code under it
+EVEN BETTER LOOK
+
+You can make the verification area look like this:
+
+ ┌────────────────────┐
+ │   VERIFIED RESULT  │
+ │                    │
+ │    [ QR CODE ]     │
+ │                    │
+ │  Verify Authenticity
+ │  basc.edu.ph/verify
+ │                    │
+ │ Ref: BASC-X91A-K2L │
+ └────────────────────┘
+
+This looks VERY institutional.
+
+WHAT MOST UNIVERSITIES USE NOW
+
+Common real-world setup:
+
+QR code
+online verification page
+unique verification token
+real-time database validation
+issuer-controlled verification portal
+
+That’s exactly what you should implement.

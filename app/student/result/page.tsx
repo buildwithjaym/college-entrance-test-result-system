@@ -11,6 +11,10 @@ import {
 
 import { PrintResultButton } from "@/components/student/print-result-button"
 import { ResultSheet } from "@/components/student/result-sheet"
+import {
+  createVerificationUrl,
+  ensureResultVerification,
+} from "@/lib/result-verification"
 import { createClient } from "@/lib/supabase/server"
 
 function formatDate(date?: string | null) {
@@ -187,6 +191,7 @@ export default async function StudentResultPage() {
     .from("results")
     .select(`
       id,
+      applicant_id,
       overall_percentage,
       remarks,
       is_published,
@@ -244,6 +249,16 @@ export default async function StudentResultPage() {
     ? formatDate(result.published_at)
     : ""
   const formattedGeneratedAt = formatDateTime(new Date().toISOString())
+
+  const verification = await ensureResultVerification({
+    resultId: result.id,
+    applicantId: result.applicant_id,
+    overallPercentage: result.overall_percentage,
+    publishedAt: result.published_at,
+  })
+
+  const verificationUrl = createVerificationUrl(verification.verification_token)
+  const verificationCode = verification.verification_code
 
   const statusTheme = isQualified
     ? {
@@ -328,6 +343,8 @@ export default async function StudentResultPage() {
               remarks={result.remarks}
               formattedPublishedAt={formattedPublishedAt}
               formattedGeneratedAt={formattedGeneratedAt}
+              verificationUrl={verificationUrl}
+              verificationCode={verificationCode}
               mode="preview"
             />
           </div>
@@ -353,6 +370,8 @@ export default async function StudentResultPage() {
             remarks={result.remarks}
             formattedPublishedAt={formattedPublishedAt}
             formattedGeneratedAt={formattedGeneratedAt}
+            verificationUrl={verificationUrl}
+            verificationCode={verificationCode}
             mode="export"
           />
         </div>

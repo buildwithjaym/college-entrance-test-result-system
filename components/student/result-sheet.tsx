@@ -11,7 +11,17 @@ type ResultSheetProps = {
   remarks?: string | null
   formattedPublishedAt?: string
   formattedGeneratedAt: string
+  verificationUrl?: string
+  verificationCode?: string
   mode?: "preview" | "export"
+}
+
+function getQrUrl(value?: string) {
+  if (!value) return ""
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+    value,
+  )}`
 }
 
 function ExportImg({
@@ -52,8 +62,11 @@ export function ResultSheet({
   remarks,
   formattedPublishedAt,
   formattedGeneratedAt,
+  verificationUrl,
   mode = "preview",
 }: ResultSheetProps) {
+  const qrUrl = getQrUrl(verificationUrl)
+
   if (mode === "export") {
     return (
       <div
@@ -87,7 +100,7 @@ export function ResultSheet({
               width: "100%",
               height: "100%",
               border: "2px solid #93c5fd",
-              padding: "42px 46px 28px",
+              padding: "36px 42px 24px",
               boxSizing: "border-box",
               overflow: "hidden",
               background: "#ffffff",
@@ -100,7 +113,7 @@ export function ResultSheet({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: 0.05,
+                opacity: 0.04,
                 pointerEvents: "none",
               }}
             >
@@ -109,7 +122,11 @@ export function ResultSheet({
                 alt="Basilan State College watermark"
                 width={360}
                 height={360}
-                style={{ width: "360px", height: "360px", objectFit: "contain" }}
+                style={{
+                  width: "360px",
+                  height: "360px",
+                  objectFit: "contain",
+                }}
               />
             </div>
 
@@ -130,34 +147,18 @@ export function ResultSheet({
                   alignItems: "start",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-start",
-                    paddingTop: "6px",
-                  }}
-                >
-                  <div
+                <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                  <ExportImg
+                    src="/logo.jpg"
+                    alt="Basilan State College logo"
+                    width={78}
+                    height={78}
                     style={{
                       width: "78px",
                       height: "78px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      objectFit: "contain",
                     }}
-                  >
-                    <ExportImg
-                      src="/logo.jpg"
-                      alt="Basilan State College logo"
-                      width={78}
-                      height={78}
-                      style={{
-                        width: "78px",
-                        height: "78px",
-                        objectFit: "contain",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
 
                 <div style={{ textAlign: "center" }}>
@@ -176,118 +177,100 @@ export function ResultSheet({
                       textTransform: "uppercase",
                     }}
                   >
-                    TESTING AND EVALUATION CENTER
+                    Testing and Evaluation Center
                   </p>
                   <p style={{ margin: 0, fontSize: "15px", lineHeight: "19px" }}>
                     Isabela City, Basilan
                   </p>
-
-                  <h1
-                    style={{
-                      margin: "26px 0 0",
-                      fontSize: "52px",
-                      lineHeight: 1,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    COLLEGE ENTRANCE TEST RESULT
-                  </h1>
-
-                  <p style={{ margin: "10px 0 0", fontSize: "19px" }}>
-                    School Year {schoolYearLabel ?? "Not available"}
-                  </p>
-
-                  <p
-                    style={{
-                      margin: "38px 0 0",
-                      fontSize: "42px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      textDecoration: "underline",
-                      textUnderlineOffset: "5px",
-                      lineHeight: 1.15,
-                    }}
-                  >
-                    {fullName}
-                  </p>
-
-                  <p style={{ margin: "8px 0 0", fontSize: "16px" }}>
-                    Examinee&apos;s Name
-                  </p>
-
-                  <p
-                    style={{
-                      margin: "42px 0 0",
-                      fontSize: "30px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      lineHeight: 1,
-                    }}
-                  >
-                    OVERALL ABILITY RATING
-                  </p>
-
-                  <p
-                    style={{
-                      margin: "14px 0 0",
-                      fontSize: "82px",
-                      fontWeight: 700,
-                      color: "#dc2626",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {overallPercentage}%
-                  </p>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    paddingTop: "6px",
-                  }}
-                >
-                  <div
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <ExportImg
+                    src="/testing.png"
+                    alt="Testing and Evaluation Center seal"
+                    width={78}
+                    height={78}
                     style={{
                       width: "78px",
                       height: "78px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      objectFit: "contain",
                     }}
-                  >
-                    <ExportImg
-                      src="/testing.png"
-                      alt="Testing and Evaluation Center seal"
-                      width={78}
-                      height={78}
-                      style={{
-                        width: "78px",
-                        height: "78px",
-                        objectFit: "contain",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
+              </div>
+
+              <div style={{ textAlign: "center" }}>
+                <h1
+                  style={{
+                    margin: "52px 0 0",
+                    fontSize: "52px",
+                    lineHeight: 1.08,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  College Entrance Test Result
+                </h1>
+
+                <p style={{ margin: "8px 0 0", fontSize: "19px" }}>
+                  School Year {schoolYearLabel ?? "Not available"}
+                </p>
+
+                <p
+                  style={{
+                    margin: "42px 0 0",
+                    fontSize: "42px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "5px",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {fullName}
+                </p>
+
+                <p style={{ margin: "8px 0 0", fontSize: "16px" }}>
+                  Examinee&apos;s Name
+                </p>
+
+                <p
+                  style={{
+                    margin: "34px 0 0",
+                    fontSize: "30px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    lineHeight: 1,
+                  }}
+                >
+                  Overall Ability Rating
+                </p>
+
+                <p
+                  style={{
+                    margin: "14px 0 0",
+                    fontSize: "82px",
+                    fontWeight: 700,
+                    color: "#dc2626",
+                    lineHeight: 1,
+                  }}
+                >
+                  {overallPercentage}%
+                </p>
               </div>
 
               <div
                 style={{
-                  marginTop: "auto",
-                  paddingTop: "24px",
+                  marginTop: "42px",
+                  borderTop: "1px solid #bfdbfe",
+                  paddingTop: "16px",
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: "36px",
+                  gap: "28px",
+                  alignItems: "end",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "17px",
-                    lineHeight: 1.7,
-                    textAlign: "left",
-                  }}
-                >
+                <div style={{ fontSize: "16px", lineHeight: 1.65 }}>
                   <p style={{ margin: 0 }}>
                     <strong>Valid until:</strong>{" "}
                     {schoolYearLabel ? `${schoolYearLabel} only` : "Not available"}
@@ -305,81 +288,79 @@ export function ResultSheet({
                     </p>
                   ) : null}
 
-                  <p
-                    style={{
-                      margin: "14px 0 0",
-                      fontSize: "14px",
-                      lineHeight: 1.65,
-                    }}
-                  >
-                    Note: This CET result is subject to verification against the
-                    official Testing and Evaluation Center masterlist. Any erasure
-                    or alteration hereon nullifies this result.
+                  <p style={{ margin: "10px 0 0", fontSize: "13px", lineHeight: 1.55 }}>
+                    This CET result is subject to official verification by the
+                    Testing and Evaluation Center.
                   </p>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    alignItems: "end",
-                  }}
-                >
-                  <div style={{ maxWidth: "340px", textAlign: "right" }}>
-                    <div style={{ height: "26px" }} />
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "24px",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      AL-BASSER S. SAPPAYANI, ED. D, RGC
-                    </p>
-                    <p style={{ margin: 0, fontSize: "16px" }}>Director, TEC</p>
-                    <p style={{ margin: 0, fontSize: "16px" }}>
-                      R.A. 9258, PRC License # 0000876
-                    </p>
+                <div style={{ textAlign: "right" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    AL-BASSER S. SAPPAYANI, ED. D, RGC
+                  </p>
+                  <p style={{ margin: 0, fontSize: "15px" }}>Director, TEC</p>
+                  <p style={{ margin: 0, fontSize: "15px" }}>
+                    R.A. 9258, PRC License # 0000876
+                  </p>
 
-                    {formattedPublishedAt ? (
-                      <p
-                        style={{
-                          margin: "8px 0 0",
-                          fontSize: "13px",
-                          color: "#475569",
-                        }}
-                      >
-                        Published: {formattedPublishedAt}
-                      </p>
-                    ) : null}
-                  </div>
+                  {formattedPublishedAt ? (
+                    <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#475569" }}>
+                      Published: {formattedPublishedAt}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
               <div
                 style={{
-                  marginTop: "16px",
-                  paddingTop: "9px",
+                  marginTop: "12px",
+                  paddingTop: "8px",
+                  borderTop: "1px dashed #cbd5e1",
                   display: "flex",
                   justifyContent: "space-between",
-                  fontSize: "12px",
+                  alignItems: "center",
+                  fontSize: "11px",
                   color: "#64748b",
                 }}
               >
-                <p style={{ margin: 0 }}>
-                  Generated by{" "}
-                  <strong style={{ color: "#334155" }}>
-                    BASC-CET-Result-System
-                  </strong>
-                </p>
-                <p style={{ margin: 0 }}>
-                  Generated on{" "}
-                  <strong style={{ color: "#334155" }}>
-                    {formattedGeneratedAt}
-                  </strong>
-                </p>
+                <div>
+                  <p style={{ margin: 0 }}>Generated by BASC-CET-Result-System</p>
+                  <p style={{ margin: 0 }}>Generated on {formattedGeneratedAt}</p>
+                </div>
+
+                {qrUrl ? (
+                  <a
+                    href={verificationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "block",
+                      padding: "4px",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                    }}
+                  >
+                    <ExportImg
+                      src={qrUrl}
+                      alt="Verification QR"
+                      width={68}
+                      height={68}
+                      style={{
+                        width: "68px",
+                        height: "68px",
+                      }}
+                    />
+                  </a>
+                ) : null}
               </div>
             </div>
           </div>
@@ -394,44 +375,12 @@ export function ResultSheet({
       data-reference-number={referenceNumber}
       data-full-name={fullName}
       data-last-name={lastName}
-      className="mx-auto w-full max-w-[1100px] font-['Times_New_Roman']"
+      className="mx-auto w-full max-w-[1180px] font-['Times_New_Roman']"
     >
       <div className="rounded-[24px] bg-white p-2 sm:p-3 md:p-4">
-        <div
-          className="
-            mx-auto
-            w-full
-            max-w-md
-            overflow-hidden
-            rounded-[24px]
-            border-[3px]
-            border-blue-700
-            bg-white
-            p-2
-            shadow-sm
-            md:max-w-none
-            md:rounded-none
-            md:border-[4px]
-            md:p-3
-            md:shadow-none
-          "
-        >
-          <div
-            className="
-              relative
-              overflow-hidden
-              rounded-[18px]
-              border-2
-              border-blue-300
-              bg-white
-              p-3
-              md:min-h-[760px]
-              md:rounded-none
-              md:px-10
-              md:py-8
-            "
-          >
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.05]">
+        <div className="mx-auto w-full max-w-md overflow-hidden rounded-[24px] border-[3px] border-blue-700 bg-white p-2 shadow-sm md:max-w-none md:rounded-none md:border-[4px] md:p-3 md:shadow-none">
+          <div className="relative overflow-hidden rounded-[18px] border-2 border-blue-300 bg-white p-3 md:min-h-[760px] md:rounded-none md:p-8">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.04]">
               <Image
                 src="/logo.jpg"
                 alt="Basilan State College watermark"
@@ -442,7 +391,7 @@ export function ResultSheet({
               />
             </div>
 
-            <div className="relative z-10 flex h-full flex-col">
+            <div className="relative z-10 flex min-h-full flex-col">
               <div className="grid grid-cols-[60px_1fr_60px] items-start gap-2 md:grid-cols-[100px_1fr_100px] md:gap-5">
                 <div className="flex justify-start pt-1">
                   <div className="flex h-12 w-12 items-center justify-center md:h-[78px] md:w-[78px]">
@@ -473,7 +422,7 @@ export function ResultSheet({
                     Isabela City, Basilan
                   </p>
 
-                  <h1 className="mt-3 text-[18px] font-bold uppercase leading-tight tracking-wide text-slate-900 md:mt-6 md:text-[48px] md:tracking-normal">
+                  <h1 className="mt-3 text-[18px] font-bold uppercase leading-tight tracking-wide text-slate-900 md:mt-6 md:text-[46px] md:tracking-normal">
                     College Entrance Test Result
                   </h1>
 
@@ -481,9 +430,10 @@ export function ResultSheet({
                     School Year {schoolYearLabel ?? "Not available"}
                   </p>
 
-                  <p className="mt-4 text-[22px] font-bold uppercase leading-tight underline decoration-[1px] underline-offset-4 text-slate-900 md:mt-8 md:text-[40px]">
+                  <p className="mt-4 text-[22px] font-bold uppercase leading-tight underline decoration-[1px] underline-offset-4 text-slate-900 md:mt-8 md:text-[38px]">
                     {fullName}
                   </p>
+
                   <p className="mt-1 text-[10px] text-slate-700 md:text-[15px]">
                     Examinee&apos;s Name
                   </p>
@@ -491,7 +441,8 @@ export function ResultSheet({
                   <p className="mt-5 text-[18px] font-bold uppercase leading-tight text-slate-900 md:mt-10 md:text-[28px]">
                     Overall Ability Rating
                   </p>
-                  <p className="mt-2 text-[42px] font-extrabold leading-none tracking-tight text-red-600 md:mt-3 md:text-[78px]">
+
+                  <p className="mt-2 text-[42px] font-extrabold leading-none tracking-tight text-red-600 md:mt-3 md:text-[76px]">
                     {overallPercentage}%
                   </p>
                 </div>
@@ -512,8 +463,8 @@ export function ResultSheet({
                 </div>
               </div>
 
-              <div className="mt-5 border-t border-blue-200 pt-4 md:mt-auto md:grid md:grid-cols-2 md:gap-10 md:pt-6">
-                <div className="space-y-1.5 text-[11px] leading-5 text-slate-800 md:space-y-0 md:text-[16px] md:leading-8">
+              <div className="mt-14 border-t border-blue-200 pt-5 md:mt-16 md:grid md:grid-cols-2 md:gap-8 md:pt-6">
+                <div className="space-y-1.5 text-[11px] leading-5 text-slate-800 md:space-y-0 md:text-[15px] md:leading-7">
                   <p>
                     <span className="font-semibold">Valid until:</span>{" "}
                     {schoolYearLabel ? `${schoolYearLabel} only` : "Not available"}
@@ -533,17 +484,15 @@ export function ResultSheet({
                     </p>
                   ) : null}
 
-                  <p className="pt-1 text-[10px] leading-5 text-slate-700 md:mt-4 md:text-[14px] md:leading-7">
-                    Note: This CET result is subject to verification against the
-                    official Testing and Evaluation Center masterlist. Any erasure
-                    or alteration hereon nullifies this result.
+                  <p className="pt-1 text-[10px] leading-5 text-slate-700 md:mt-3 md:text-[13px] md:leading-6">
+                    This CET result is subject to official verification by the
+                    Testing and Evaluation Center.
                   </p>
                 </div>
 
                 <div className="mt-5 flex justify-end border-t border-blue-200 pt-4 md:mt-0 md:items-end md:border-t-0 md:pt-0">
                   <div className="max-w-[280px] text-right md:max-w-[340px]">
-                    <div className="mb-2 h-4 md:h-6" />
-                    <p className="text-[12px] font-semibold uppercase leading-tight text-slate-900 md:text-[22px]">
+                    <p className="text-[12px] font-semibold uppercase leading-tight text-slate-900 md:text-[21px]">
                       AL-BASSER S. SAPPAYANI, ED. D, RGC
                     </p>
                     <p className="text-[10px] text-slate-800 md:text-[15px]">
@@ -562,20 +511,39 @@ export function ResultSheet({
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-dashed border-blue-200 pt-2 md:mt-5 md:pt-3">
-                <div className="flex flex-col gap-1 text-[8px] text-slate-500 md:flex-row md:items-center md:justify-between md:text-[12px]">
-                  <p>
-                    Generated by{" "}
-                    <span className="font-semibold text-slate-700">
-                      BASC-CET-Result-System
-                    </span>
-                  </p>
-                  <p>
-                    Generated on{" "}
-                    <span className="font-medium text-slate-700">
-                      {formattedGeneratedAt}
-                    </span>
-                  </p>
+              <div className="mt-5 border-t border-dashed border-slate-200 pt-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[8px] text-slate-500 md:text-[12px]">
+                    <p>
+                      Generated by{" "}
+                      <span className="font-semibold text-slate-700">
+                        BASC-CET-Result-System
+                      </span>
+                    </p>
+                    <p>
+                      Generated on{" "}
+                      <span className="font-medium text-slate-700">
+                        {formattedGeneratedAt}
+                      </span>
+                    </p>
+                  </div>
+
+                  {qrUrl ? (
+                    <a
+                      href={verificationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-md border border-slate-200 bg-white p-1 shadow-sm transition hover:scale-105"
+                    >
+                      <img
+                        src={qrUrl}
+                        alt="Verification QR"
+                        width={58}
+                        height={58}
+                        className="h-[58px] w-[58px]"
+                      />
+                    </a>
+                  ) : null}
                 </div>
               </div>
             </div>

@@ -121,3 +121,101 @@ on results (is_published, created_at desc);
 
 create index if not exists idx_results_published_percentage
 on results (is_published, overall_percentage desc);
+
+
+
+create extension if not exists pgcrypto;
+
+create table public.result_verifications (
+  id bigint generated always as identity not null,
+  result_id bigint not null,
+
+  verification_token text not null,
+  verification_code text not null,
+  verification_hash text not null,
+
+  is_active boolean not null default true,
+  revoked_at timestamp with time zone null,
+  revoked_reason text null,
+
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+
+  constraint result_verifications_pkey primary key (id),
+
+  constraint result_verifications_result_id_key unique (result_id),
+  constraint result_verifications_token_key unique (verification_token),
+  constraint result_verifications_code_key unique (verification_code),
+
+  constraint result_verifications_result_id_fkey
+    foreign key (result_id)
+    references public.results (id)
+    on delete cascade
+);
+
+
+create index if not exists idx_result_verifications_result_id
+on public.result_verifications using btree (result_id);
+
+create index if not exists idx_result_verifications_token
+on public.result_verifications using btree (verification_token);
+
+create index if not exists idx_result_verifications_code
+on public.result_verifications using btree (verification_code);
+
+create index if not exists idx_result_verifications_is_active
+on public.result_verifications using btree (is_active);
+
+
+create trigger trg_result_verifications_updated_at
+before update on public.result_verifications
+for each row
+execute function set_updated_at();
+
+
+
+create table public.result_verification_logs (
+  id bigint generated always as identity not null,
+  verification_id bigint null,
+
+  token_used text not null,
+  status text not null,
+  ip_address text null,
+  user_agent text null,
+
+  created_at timestamp with time zone not null default now(),
+
+  constraint result_verification_logs_pkey primary key (id),
+
+  constraint result_verification_logs_verification_id_fkey
+    foreign key (verification_id)
+    references public.result_verifications (id)
+    on delete set null,
+
+  constraint result_verification_logs_status_check
+    check (
+      status in (
+        'verified',
+        'invalid',
+        'revoked',
+        'hash_mismatch'
+      )
+    )
+);
+
+
+
+create index if not exists idx_result_verification_logs_verification_id
+on public.result_verification_logs using btree (verification_id);
+
+create index if not exists idx_result_verification_logs_token_used
+on public.result_verification_logs using btree (token_used);
+
+create index if not exists idx_result_verification_logs_created_at
+on public.result_verification_logs using btree (created_at desc);
+
+create index if not exists idx_result_verification_logs_status
+on public.result_verification_logs using btree (status);
+
+alter table public.result_verifications enable row level security;
+alter table public.result_verification_logs enable row level security;
