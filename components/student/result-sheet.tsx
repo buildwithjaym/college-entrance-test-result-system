@@ -76,7 +76,7 @@ export function ResultSheet({
         data-last-name={lastName}
         style={{
           width: "1600px",
-          height: "800px",
+          height: "8000px",
           background: "#ffffff",
           padding: "20px",
           boxSizing: "border-box",
