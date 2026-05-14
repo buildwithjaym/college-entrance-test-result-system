@@ -161,20 +161,20 @@ export default function QRScannerClient() {
             const size = Math.floor(Math.min(width, height) * 0.76)
 
             return {
-              width: Math.max(210, Math.min(size, 310)),
-              height: Math.max(210, Math.min(size, 310)),
+              width: Math.max(210, Math.min(size, 320)),
+              height: Math.max(210, Math.min(size, 320)),
             }
           },
           aspectRatio: 1,
         },
         verifyQr,
-        () => {}
+        () => {},
       )
 
       setIsScanning(true)
     } catch {
       setError(
-        "Camera permission was denied or unavailable. Please allow camera access in your browser."
+        "Camera permission was denied or unavailable. Please allow camera access in your browser.",
       )
     } finally {
       setIsStarting(false)
@@ -195,33 +195,33 @@ export default function QRScannerClient() {
 
   return (
     <>
-      <main className="flex min-h-[calc(100dvh-3rem)] items-center justify-center px-3 py-4 sm:px-5">
-        <div className="w-full max-w-[430px] overflow-hidden rounded-[1.75rem] border border-red-100 bg-white shadow-xl">
-          <div className="bg-gradient-to-br from-red-700 to-red-900 px-4 py-4 text-white sm:px-5">
+      <main className="flex min-h-[calc(100dvh-1rem)] items-center justify-center px-2 py-2 sm:px-4 lg:px-6">
+        <div className="w-full max-w-[430px] overflow-hidden rounded-[1.5rem] border border-red-100 bg-white shadow-xl sm:max-w-[480px] lg:max-w-[520px]">
+          <div className="bg-gradient-to-br from-red-700 to-red-900 px-4 py-3 text-white sm:px-5 sm:py-4">
             <div className="flex items-center justify-between">
               <Link
                 href="/admin/dashboard"
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-white/10 px-3 text-sm font-bold hover:bg-white/20"
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-white/10 px-3 text-xs font-bold transition hover:bg-white/20 sm:text-sm"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Link>
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/15 sm:h-10 sm:w-10">
                 <QrCode className="h-5 w-5" />
               </div>
             </div>
 
-            <div className="mt-4 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
-                <Camera className="h-6 w-6" />
+            <div className="mt-3 text-center sm:mt-4">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/15 sm:h-12 sm:w-12">
+                <Camera className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
 
-              <h1 className="mt-3 text-xl font-black sm:text-2xl">
+              <h1 className="mt-2 text-lg font-black sm:mt-3 sm:text-2xl">
                 Scan Result QR
               </h1>
 
-              <p className="mt-1 text-xs leading-5 text-red-50 sm:text-sm">
+              <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-red-50 sm:text-sm">
                 Scan the result QR and instantly check its authenticity.
               </p>
             </div>
@@ -230,21 +230,21 @@ export default function QRScannerClient() {
           <div className="p-3 sm:p-4">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
               {!isScanning && !isStarting ? (
-                <div className="flex h-[320px] max-h-[48dvh] min-h-[260px] flex-col items-center justify-center px-5 text-center">
+                <div className="flex h-[clamp(240px,45dvh,360px)] flex-col items-center justify-center px-4 text-center">
                   {isChecking ? (
                     <>
-                      <Loader2 className="h-12 w-12 animate-spin text-red-700" />
-                      <p className="mt-4 text-sm font-bold text-slate-900">
+                      <Loader2 className="h-11 w-11 animate-spin text-red-700" />
+                      <p className="mt-3 text-sm font-bold text-slate-900">
                         Checking QR...
                       </p>
                     </>
                   ) : (
                     <>
-                      <QrCode className="h-14 w-14 text-red-700" />
-                      <p className="mt-4 text-sm font-bold text-slate-900">
+                      <QrCode className="h-12 w-12 text-red-700 sm:h-14 sm:w-14" />
+                      <p className="mt-3 text-sm font-bold text-slate-900">
                         Ready to scan
                       </p>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                      <p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">
                         Tap Open Camera and allow browser camera permission.
                       </p>
                     </>
@@ -256,7 +256,7 @@ export default function QRScannerClient() {
                 id="qr-reader"
                 className={
                   isScanning || isStarting
-                    ? "h-[320px] max-h-[48dvh] min-h-[260px] overflow-hidden [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+                    ? "h-[clamp(240px,45dvh,360px)] overflow-hidden [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
                     : "hidden"
                 }
               />
@@ -301,7 +301,7 @@ export default function QRScannerClient() {
               )}
             </div>
 
-            <p className="mt-3 text-center text-[11px] leading-5 text-slate-500">
+            <p className="mt-2 text-center text-[11px] leading-5 text-slate-500">
               Camera scan only. Uploading QR images is disabled.
             </p>
           </div>
@@ -309,71 +309,110 @@ export default function QRScannerClient() {
       </main>
 
       {scanResult ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm">
+          <div className="w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-white shadow-2xl">
             <div
               className={
                 scanResult.valid
-                  ? "bg-gradient-to-br from-green-600 to-emerald-800 px-5 py-7 text-center text-white"
-                  : "bg-gradient-to-br from-red-700 to-red-900 px-5 py-7 text-center text-white"
+                  ? "bg-gradient-to-br from-green-600 to-emerald-800 px-5 py-5 text-center text-white"
+                  : "bg-gradient-to-br from-red-700 to-red-900 px-5 py-5 text-center text-white"
               }
             >
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
                 {scanResult.valid ? (
-                  <BadgeCheck className="h-9 w-9" />
+                  <BadgeCheck className="h-7 w-7" />
                 ) : (
-                  <XCircle className="h-9 w-9" />
+                  <XCircle className="h-7 w-7" />
                 )}
               </div>
 
-              <h2 className="mt-4 text-2xl font-black">
+              <h2 className="mt-2 text-xl font-black">
                 {scanResult.valid ? "Verified Result" : "Invalid Result"}
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-white/90">
+              <p className="mx-auto mt-1 max-w-xl text-sm leading-5 text-white/90">
                 {scanResult.message}
               </p>
             </div>
 
-            <div className="p-5">
+            <div className="max-h-[calc(100dvh-190px)] overflow-y-auto p-4 sm:p-5">
               {scanResult.valid && scanResult.data ? (
-                <div className="space-y-3">
-                  <InfoRow label="Student Name" value={scanResult.data.fullName} />
-                  <InfoRow label="Reference No." value={scanResult.data.referenceNumber} />
-                  <InfoRow label="Rating" value={scanResult.data.overallPercentage} />
-                  <InfoRow label="Status" value={scanResult.data.qualificationStatus} strong />
-                  <InfoRow label="School Year" value={scanResult.data.schoolYear} />
-                  <InfoRow label="Verification Code" value={scanResult.data.verificationCode} />
+                <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <InfoRow label="Student Name" value={scanResult.data.fullName} />
+                    <InfoRow
+                      label="Reference No."
+                      value={scanResult.data.referenceNumber}
+                    />
+                    <InfoRow
+                      label="Rating"
+                      value={scanResult.data.overallPercentage}
+                    />
+                    <InfoRow
+                      label="Status"
+                      value={scanResult.data.qualificationStatus}
+                      strong
+                    />
+                    <InfoRow label="School Year" value={scanResult.data.schoolYear} />
+                    <InfoRow
+                      label="Verification Code"
+                      value={scanResult.data.verificationCode}
+                    />
+                  </div>
 
-                  <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm font-semibold text-green-800">
-                    <ShieldCheck className="mb-1 h-5 w-5" />
-                    This QR matches the official CET verification record.
+                  <div className="flex flex-col justify-between gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-800">
+                    <div>
+                      <ShieldCheck className="h-6 w-6" />
+                      <p className="mt-2 text-sm font-bold leading-6">
+                        This QR matches the official CET verification record.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <button
+                        type="button"
+                        onClick={scanAgain}
+                        className="h-11 rounded-2xl bg-red-700 text-sm font-black text-white transition hover:bg-red-800"
+                      >
+                        Scan Again
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setScanResult(null)}
+                        className="h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-800">
-                  This QR is invalid, revoked, unpublished, tampered, or not
-                  found in the official CET records.
+                <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-800">
+                    This QR is invalid, revoked, unpublished, tampered, or not
+                    found in the official CET records.
+                  </div>
+
+                  <div className="grid gap-2">
+                    <button
+                      type="button"
+                      onClick={scanAgain}
+                      className="h-11 rounded-2xl bg-red-700 text-sm font-black text-white transition hover:bg-red-800"
+                    >
+                      Scan Again
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setScanResult(null)}
+                      className="h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <div className="mt-5 grid gap-2">
-                <button
-                  type="button"
-                  onClick={scanAgain}
-                  className="h-11 rounded-2xl bg-red-700 text-sm font-black text-white transition hover:bg-red-800"
-                >
-                  Scan Again
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setScanResult(null)}
-                  className="h-11 rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-700 transition hover:bg-slate-50"
-                >
-                  Close
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -393,13 +432,13 @@ function InfoRow({
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+      <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
         {label}
       </p>
       <p
         className={
           strong
-            ? "mt-1 text-base font-black uppercase text-red-700"
+            ? "mt-1 text-sm font-black uppercase text-red-700"
             : "mt-1 break-words text-sm font-bold text-slate-900"
         }
       >
