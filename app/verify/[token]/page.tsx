@@ -35,8 +35,13 @@ function getSingleRelation<T>(value: T | T[] | null | undefined): T | null {
 
 function VerificationShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-dvh bg-slate-100 px-3 py-4 sm:px-4 sm:py-6">
-      <div className="mx-auto max-w-4xl">{children}</div>
+    <main className="relative min-h-dvh overflow-hidden bg-background px-3 py-4 sm:px-6 sm:py-8">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(185,28,28,0.16),transparent_35%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom_left,rgba(185,28,28,0.06),transparent,rgba(185,28,28,0.1))]" />
+
+      <div className="relative mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center justify-center">
+        {children}
+      </div>
     </main>
   )
 }
@@ -50,10 +55,10 @@ function InvalidResult({
 }) {
   return (
     <VerificationShell>
-      <div className="overflow-hidden rounded-[2rem] border border-red-100 bg-white shadow-sm">
-        <div className="bg-gradient-to-br from-red-600 via-red-600 to-red-800 px-5 py-8 text-center text-white sm:px-8 sm:py-10">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20">
-            <XCircle className="h-10 w-10" />
+      <div className="w-full overflow-hidden rounded-[2rem] border border-red-200 bg-background/95 shadow-2xl backdrop-blur">
+        <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-900 px-5 py-9 text-center text-white sm:px-10 sm:py-12">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25 sm:h-24 sm:w-24">
+            <XCircle className="h-11 w-11 sm:h-12 sm:w-12" />
           </div>
 
           <p className="mt-6 text-xs font-bold uppercase tracking-[0.28em] text-red-100">
@@ -64,32 +69,32 @@ function InvalidResult({
             {title}
           </h1>
 
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-red-50">
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-red-50 sm:text-base">
             {description}
           </p>
         </div>
 
-        <div className="p-5 sm:p-6">
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm leading-7 text-red-900">
+        <div className="p-5 sm:p-8">
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-sm leading-7 text-red-900">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-1 h-5 w-5 shrink-0" />
               <div>
-                <p className="font-bold">Possible reasons:</p>
-                <p>
-                  The QR code may be incorrect, edited, revoked, or the result
-                  does not exist in the official records.
+                <p className="font-black">Possible reasons</p>
+                <p className="mt-1">
+                  The QR code may be incorrect, edited, revoked, expired, or the
+                  result does not exist in the official records.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-7 text-center">
             <Link
               href="/student-login"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 px-6 text-sm font-bold text-white transition hover:bg-red-700"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-7 text-sm font-bold text-primary-foreground shadow-lg transition hover:bg-primary/90"
             >
               <ArrowLeft className="h-4 w-4" />
-              Go back
+              Return to login
             </Link>
           </div>
         </div>
@@ -254,97 +259,80 @@ export default async function VerifyResultPage({
 
   const overallScore = Number(result.overall_percentage)
   const qualificationStatus = overallScore >= 35 ? "QUALIFIER" : "NON-QUALIFIER"
+  const isQualifier = qualificationStatus === "QUALIFIER"
 
   return (
     <VerificationShell>
-      <div className="overflow-hidden rounded-[2rem] border border-green-100 bg-white shadow-sm">
-        <div className="bg-gradient-to-br from-green-600 via-green-600 to-emerald-800 px-5 py-8 text-center text-white sm:px-8 sm:py-10">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20">
-            <BadgeCheck className="h-11 w-11" />
+      <div className="w-full overflow-hidden rounded-[2rem] border border-primary/15 bg-background/95 shadow-2xl backdrop-blur">
+        <div className="relative overflow-hidden bg-gradient-to-br from-red-700 via-primary to-red-900 px-5 py-9 text-center text-white sm:px-10 sm:py-12">
+          <div className="absolute left-8 top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute bottom-8 right-8 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
+
+          <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/25 sm:h-24 sm:w-24">
+            <BadgeCheck className="h-11 w-11 sm:h-12 sm:w-12" />
           </div>
 
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.28em] text-green-100">
-            Result Verification
+          <p className="relative mt-6 text-xs font-bold uppercase tracking-[0.28em] text-red-100">
+            Official Result Verification
           </p>
 
-          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+          <h1 className="relative mt-3 text-3xl font-black tracking-tight sm:text-4xl">
             Verified Authentic Result
           </h1>
 
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-green-50">
+          <p className="relative mx-auto mt-4 max-w-2xl text-sm leading-7 text-red-50 sm:text-base">
             This CET result is officially recorded in the BASC Testing and
             Evaluation Center database.
           </p>
         </div>
 
-        <div className="p-5 sm:p-6">
+        <div className="p-5 sm:p-8">
           <div className="grid gap-4 sm:grid-cols-2">
             <InfoCard
-              icon={<UserRound className="h-5 w-5 text-green-700" />}
+              icon={<UserRound className="h-5 w-5 text-primary" />}
               label="Applicant Name"
               value={fullName}
             />
 
             <InfoCard
-              icon={<Hash className="h-5 w-5 text-green-700" />}
+              icon={<Hash className="h-5 w-5 text-primary" />}
               label="Reference Number"
               value={applicant.reference_number}
-              valueClassName="text-red-700"
+              valueClassName="text-primary"
             />
 
             <InfoCard
-              icon={<FileCheck2 className="h-5 w-5 text-green-700" />}
+              icon={<FileCheck2 className="h-5 w-5 text-primary" />}
               label="Overall Ability Rating"
               value={`${overallScore.toFixed(2)}%`}
             />
 
             <InfoCard
-              icon={<ShieldCheck className="h-5 w-5 text-green-700" />}
+              icon={<ShieldCheck className="h-5 w-5 text-primary" />}
               label="Qualification Status"
               value={qualificationStatus}
-              valueClassName={
-                qualificationStatus === "QUALIFIER"
-                  ? "text-green-700"
-                  : "text-red-700"
-              }
+              valueClassName={isQualifier ? "text-green-700" : "text-red-700"}
             />
           </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <p>
-                <span className="font-bold text-slate-900">School Year:</span>{" "}
-                {schoolYear?.label ?? "Not available"}
-              </p>
-
-              <p>
-                <span className="font-bold text-slate-900">Exam Date:</span>{" "}
-                {formatDate(schedule?.exam_date)}
-              </p>
-
-              <p>
-                <span className="font-bold text-slate-900">Published:</span>{" "}
-                {formatDate(result.published_at)}
-              </p>
-
-              <p>
-                <span className="font-bold text-slate-900">
-                  Verification Code:
-                </span>{" "}
-                {verification.verification_code}
-              </p>
+          <div className="mt-5 rounded-3xl border border-primary/10 bg-primary/5 p-5">
+            <div className="grid gap-4 text-sm sm:grid-cols-2">
+              <DetailItem label="School Year" value={schoolYear?.label ?? "Not available"} />
+              <DetailItem label="Exam Date" value={formatDate(schedule?.exam_date)} />
+              <DetailItem label="Published" value={formatDate(result.published_at)} />
+              <DetailItem label="Verification Code" value={verification.verification_code} />
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-green-100 bg-green-50 p-4 text-center text-sm font-semibold text-green-800">
+          <div className="mt-5 rounded-3xl border border-green-200 bg-green-50 p-5 text-center text-sm font-semibold text-green-800">
             <CalendarDays className="mx-auto mb-2 h-5 w-5" />
             Verified from the official BASC CET database.
           </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-7 text-center">
             <Link
               href="/student-login"
-              className="inline-flex h-11 items-center justify-center rounded-2xl bg-red-600 px-6 text-sm font-bold text-white transition hover:bg-red-700"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-7 text-sm font-bold text-primary-foreground shadow-lg transition hover:bg-primary/90"
             >
               Return to login
             </Link>
@@ -359,7 +347,7 @@ function InfoCard({
   icon,
   label,
   value,
-  valueClassName = "text-slate-950",
+  valueClassName = "text-foreground",
 }: {
   icon: React.ReactNode
   label: string
@@ -367,14 +355,29 @@ function InfoCard({
   valueClassName?: string
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      {icon}
-      <p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+    <div className="rounded-3xl border border-primary/10 bg-background p-5 shadow-sm">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+        {icon}
+      </div>
+
+      <p className="mt-4 text-xs font-bold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className={`mt-1 text-lg font-black uppercase ${valueClassName}`}>
+
+      <p className={`mt-1 break-words text-lg font-black uppercase ${valueClassName}`}>
         {value}
       </p>
     </div>
+  )
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="leading-6">
+      <span className="block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span className="font-bold text-foreground">{value}</span>
+    </p>
   )
 }
