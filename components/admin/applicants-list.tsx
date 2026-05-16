@@ -26,54 +26,197 @@ type Applicant = {
   created_at: string
 }
 
-function SaveButton({ pending }: { pending: boolean }) {
+const GMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@gmail\.com$/
+
+function isValidGmail(email: string) {
+  return GMAIL_PATTERN.test(email)
+}
+
+function getApplicantName(applicant: Applicant | null) {
+  if (!applicant) return ""
+
+  return [applicant.first_name, applicant.middle_name, applicant.last_name]
+    .filter(Boolean)
+    .join(" ")
+}
+
+function EditApplicantModal({
+  applicant,
+  pending,
+  onClose,
+  onSubmit,
+}: {
+  applicant: Applicant | null
+  pending: boolean
+  onClose: () => void
+  onSubmit: (formData: FormData) => Promise<void>
+}) {
+  if (!applicant) return null
+
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex h-9 items-center justify-center rounded-xl bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Saving
-        </>
-      ) : (
-        <>
-          <Save className="mr-2 h-4 w-4" />
-          Save
-        </>
-      )}
-    </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-200 p-6">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">
+              Edit Applicant
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Update applicant details. Gmail format is required.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form action={onSubmit} className="space-y-4 p-6">
+          <input type="hidden" name="id" value={applicant.id} />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Reference Number
+              </label>
+              <input
+                name="reference_number"
+                defaultValue={applicant.reference_number}
+                disabled={pending}
+                required
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Gmail Address
+              </label>
+              <input
+                name="email"
+                type="email"
+                placeholder="name@gmail.com"
+                defaultValue={applicant.email}
+                disabled={pending}
+                required
+                pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
+                title="Please enter a valid Gmail address like name@gmail.com"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+              <p className="text-xs text-slate-500">
+                Example: name@gmail.com
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                First Name
+              </label>
+              <input
+                name="first_name"
+                defaultValue={applicant.first_name}
+                disabled={pending}
+                required
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Middle Name
+              </label>
+              <input
+                name="middle_name"
+                defaultValue={applicant.middle_name ?? ""}
+                disabled={pending}
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                Last Name
+              </label>
+              <input
+                name="last_name"
+                defaultValue={applicant.last_name}
+                disabled={pending}
+                required
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={pending}
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-red-600 px-4 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
 function DeleteConfirmModal({
-  open,
-  applicantName,
+  applicant,
   pending,
   onClose,
   onConfirm,
 }: {
-  open: boolean
-  applicantName: string
+  applicant: Applicant | null
   pending: boolean
   onClose: () => void
   onConfirm: () => void
 }) {
-  if (!open) return null
+  if (!applicant) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-        <h3 className="text-lg font-bold text-slate-900">Delete applicant?</h3>
+        <h3 className="text-lg font-bold text-slate-900">
+          Delete applicant?
+        </h3>
+
         <p className="mt-2 text-sm text-slate-500">
           You are about to delete{" "}
-          <span className="font-semibold">{applicantName}</span>. This will also
-          remove their login account and profile.
+          <span className="font-semibold text-slate-800">
+            {getApplicantName(applicant)}
+          </span>
+          . This action cannot be undone.
         </p>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -109,175 +252,37 @@ function DeleteConfirmModal({
 
 function ApplicantRow({
   applicant,
-  onAskDelete,
+  onEdit,
+  onDelete,
 }: {
   applicant: Applicant
-  onAskDelete: (applicant: Applicant) => void
+  onEdit: (applicant: Applicant) => void
+  onDelete: (applicant: Applicant) => void
 }) {
-  const [editing, setEditing] = useState(false)
-  const [savePending, setSavePending] = useState(false)
-
-  async function handleUpdate(formData: FormData) {
-    const firstName = String(formData.get("first_name") ?? "").trim()
-    const lastName = String(formData.get("last_name") ?? "").trim()
-    const email = String(formData.get("email") ?? "").trim().toLowerCase()
-
-    if (!firstName) {
-      showError("First name is required.")
-      return
-    }
-
-    if (!lastName) {
-      showError("Last name is required.")
-      return
-    }
-
-    if (!email) {
-      showError("Email is required.")
-      return
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showError("Please enter a valid email address.")
-      return
-    }
-
-    formData.set("email", email)
-
-    setSavePending(true)
-    const toastId = showLoading("Updating applicant...")
-
-    try {
-      await updateApplicant(formData)
-      dismissToast(toastId)
-      showSuccess("Applicant updated successfully.")
-      setEditing(false)
-    } catch (error) {
-      dismissToast(toastId)
-      showError(
-        error instanceof Error ? error.message : "Failed to update applicant."
-      )
-    } finally {
-      setSavePending(false)
-    }
-  }
-
-  if (editing) {
-    return (
-      <tr className="border-b border-slate-100 bg-red-50/30">
-        <td colSpan={6} className="p-4">
-          <form action={handleUpdate} className="space-y-4">
-            <input type="hidden" name="id" value={applicant.id} />
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Reference Number
-                </label>
-                <input
-                  name="reference_number"
-                  defaultValue={applicant.reference_number}
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-                  required
-                  disabled={savePending}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue={applicant.email}
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-                  required
-                  disabled={savePending}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  First Name
-                </label>
-                <input
-                  name="first_name"
-                  defaultValue={applicant.first_name}
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-                  required
-                  disabled={savePending}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Middle Name
-                </label>
-                <input
-                  name="middle_name"
-                  defaultValue={applicant.middle_name ?? ""}
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-                  disabled={savePending}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Last Name
-                </label>
-                <input
-                  name="last_name"
-                  defaultValue={applicant.last_name}
-                  className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-                  required
-                  disabled={savePending}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <SaveButton pending={savePending} />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEditing(false)
-                  showInfo("Edit cancelled.")
-                }}
-                disabled={savePending}
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </button>
-            </div>
-          </form>
-        </td>
-      </tr>
-    )
-  }
-
   return (
     <tr className="border-b border-slate-100 hover:bg-slate-50/70">
       <td className="px-4 py-4 text-sm font-medium text-slate-900">
         {applicant.reference_number}
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{applicant.first_name}</td>
+      <td className="px-4 py-4 text-sm text-slate-700">
+        {applicant.first_name}
+      </td>
       <td className="px-4 py-4 text-sm text-slate-700">
         {applicant.middle_name || "—"}
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{applicant.last_name}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">{applicant.email}</td>
+      <td className="px-4 py-4 text-sm text-slate-700">
+        {applicant.last_name}
+      </td>
+      <td className="px-4 py-4 text-sm text-slate-700">
+        {applicant.email}
+      </td>
       <td className="px-4 py-4">
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => {
-              setEditing(true)
-              showInfo("Edit mode opened.")
+              onEdit(applicant)
+              showInfo("Edit modal opened.")
             }}
             className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
@@ -287,7 +292,7 @@ function ApplicantRow({
 
           <button
             type="button"
-            onClick={() => onAskDelete(applicant)}
+            onClick={() => onDelete(applicant)}
             className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 transition hover:bg-red-50"
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -310,40 +315,111 @@ export function ApplicantsList({
   totalPages: number
   query: string
 }) {
-  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null)
+  const [editingApplicant, setEditingApplicant] = useState<Applicant | null>(null)
+  const [deletingApplicant, setDeletingApplicant] = useState<Applicant | null>(
+    null
+  )
+  const [savePending, setSavePending] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
 
-  const applicantName = useMemo(() => {
-    if (!selectedApplicant) return ""
-    return [
-      selectedApplicant.first_name,
-      selectedApplicant.middle_name,
-      selectedApplicant.last_name,
-    ]
-      .filter(Boolean)
-      .join(" ")
-  }, [selectedApplicant])
+  const normalizedTotalPages = Math.max(totalPages, 1)
 
-  const buildPageLink = (page: number) => {
+  const pageSummary = useMemo(() => {
+    return `Page ${currentPage} of ${normalizedTotalPages}`
+  }, [currentPage, normalizedTotalPages])
+
+  function buildPageLink(page: number) {
     const params = new URLSearchParams()
+
     if (query) params.set("q", query)
     params.set("page", String(page))
+
     return `/admin/applicants?${params.toString()}`
   }
 
+  async function handleUpdate(formData: FormData) {
+    const id = String(formData.get("id") ?? "").trim()
+    const referenceNumber = String(
+      formData.get("reference_number") ?? ""
+    ).trim()
+    const firstName = String(formData.get("first_name") ?? "").trim()
+    const middleName = String(formData.get("middle_name") ?? "").trim()
+    const lastName = String(formData.get("last_name") ?? "").trim()
+    const email = String(formData.get("email") ?? "").trim().toLowerCase()
+
+    if (!id) {
+      showError("Applicant ID is missing.")
+      return
+    }
+
+    if (!referenceNumber) {
+      showError("Reference number is required.")
+      return
+    }
+
+    if (!firstName) {
+      showError("First name is required.")
+      return
+    }
+
+    if (!lastName) {
+      showError("Last name is required.")
+      return
+    }
+
+    if (!email) {
+      showError("Email is required.")
+      return
+    }
+
+    if (!isValidGmail(email)) {
+      showError(
+        "Invalid Gmail format. Please use a valid Gmail address like name@gmail.com."
+      )
+      return
+    }
+
+    formData.set("id", id)
+    formData.set("reference_number", referenceNumber)
+    formData.set("first_name", firstName)
+    formData.set("middle_name", middleName)
+    formData.set("last_name", lastName)
+    formData.set("email", email)
+
+    setSavePending(true)
+    const toastId = showLoading("Updating applicant...")
+
+    try {
+      await updateApplicant(formData)
+
+      dismissToast(toastId)
+      showSuccess("Applicant updated successfully.")
+      setEditingApplicant(null)
+    } catch (error) {
+      dismissToast(toastId)
+      showError(
+        error instanceof Error ? error.message : "Failed to update applicant."
+      )
+    } finally {
+      setSavePending(false)
+    }
+  }
+
   async function handleDeleteConfirmed() {
-    if (!selectedApplicant) return
+    if (!deletingApplicant || deletePending) return
 
     setDeletePending(true)
     const toastId = showLoading("Deleting applicant...")
 
     try {
       const formData = new FormData()
-      formData.set("id", String(selectedApplicant.id))
+      formData.set("id", String(deletingApplicant.id))
+
       await deleteApplicant(formData)
+
       dismissToast(toastId)
       showSuccess("Applicant deleted successfully.")
-      setSelectedApplicant(null)
+      setDeletingApplicant(null)
     } catch (error) {
       dismissToast(toastId)
       showError(
@@ -395,7 +471,8 @@ export function ApplicantsList({
                 <ApplicantRow
                   key={applicant.id}
                   applicant={applicant}
-                  onAskDelete={setSelectedApplicant}
+                  onEdit={setEditingApplicant}
+                  onDelete={setDeletingApplicant}
                 />
               ))}
             </tbody>
@@ -403,9 +480,7 @@ export function ApplicantsList({
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-500">
-            Page {currentPage} of {totalPages}
-          </p>
+          <p className="text-sm text-slate-500">{pageSummary}</p>
 
           <div className="flex items-center gap-2">
             <Link
@@ -420,9 +495,11 @@ export function ApplicantsList({
             </Link>
 
             <Link
-              href={buildPageLink(Math.min(currentPage + 1, totalPages))}
+              href={buildPageLink(
+                Math.min(currentPage + 1, normalizedTotalPages)
+              )}
               className={`inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition ${
-                currentPage >= totalPages
+                currentPage >= normalizedTotalPages
                   ? "pointer-events-none border-slate-200 text-slate-300"
                   : "border-slate-200 text-slate-700 hover:bg-slate-50"
               }`}
@@ -433,11 +510,21 @@ export function ApplicantsList({
         </div>
       </div>
 
+      <EditApplicantModal
+        applicant={editingApplicant}
+        pending={savePending}
+        onClose={() => {
+          if (!savePending) setEditingApplicant(null)
+        }}
+        onSubmit={handleUpdate}
+      />
+
       <DeleteConfirmModal
-        open={!!selectedApplicant}
-        applicantName={applicantName}
+        applicant={deletingApplicant}
         pending={deletePending}
-        onClose={() => !deletePending && setSelectedApplicant(null)}
+        onClose={() => {
+          if (!deletePending) setDeletingApplicant(null)
+        }}
         onConfirm={handleDeleteConfirmed}
       />
     </>
