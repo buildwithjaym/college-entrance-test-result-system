@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, KeyRound, Loader2, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,9 +25,21 @@ export default function ChangePasswordPage() {
 
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
+
+  const passwordsMatch =
+    newPassword.length > 0 &&
+    confirmPassword.length > 0 &&
+    newPassword === confirmPassword
+
+  const passwordsDoNotMatch =
+    newPassword.length > 0 &&
+    confirmPassword.length > 0 &&
+    newPassword !== confirmPassword
 
   useEffect(() => {
     let mounted = true
@@ -242,21 +254,39 @@ export default function ChangePasswordPage() {
                     <Label htmlFor="newPassword" className="text-sm font-medium">
                       New Password
                     </Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter your new password"
-                      required
-                      disabled={saving}
-                      className="h-12 rounded-xl border-primary/10 bg-background shadow-sm focus-visible:ring-primary"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Minimum of 8 characters.
-                    </p>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter your new password"
+                        required
+                        disabled={saving}
+                        className="h-12 rounded-xl border-primary/10 bg-background pr-12 shadow-sm focus-visible:ring-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((prev) => !prev)}
+                        disabled={saving}
+                        aria-label={
+                          showNewPassword ? "Hide new password" : "Show new password"
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                      <p>Minimum of 8 characters.</p>
+                      <p>{newPassword.length} characters</p>
+                    </div>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <Label
                       htmlFor="confirmPassword"
@@ -264,16 +294,52 @@ export default function ChangePasswordPage() {
                     >
                       Confirm Password
                     </Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter your new password"
-                      required
-                      disabled={saving}
-                      className="h-12 rounded-xl border-primary/10 bg-background shadow-sm focus-visible:ring-primary"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Re-enter your new password"
+                        required
+                        disabled={saving}
+                        className="h-12 rounded-xl border-primary/10 bg-background pr-12 shadow-sm focus-visible:ring-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        disabled={saving}
+                        aria-label={
+                          showConfirmPassword
+                            ? "Hide confirm password"
+                            : "Show confirm password"
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <p className="text-muted-foreground">
+                        {confirmPassword.length} characters
+                      </p>
+
+                      {passwordsMatch ? (
+                        <p className="font-medium text-green-600">
+                          Passwords match
+                        </p>
+                      ) : null}
+
+                      {passwordsDoNotMatch ? (
+                        <p className="font-medium text-red-600">
+                          Passwords do not match
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
 
                   {errorMessage ? (
