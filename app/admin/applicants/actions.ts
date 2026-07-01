@@ -101,6 +101,11 @@ export async function createApplicant(formData: FormData) {
   if (!email) throw new Error("Email is required.")
   if (!isValidEmail(email)) throw new Error("Please enter a valid email address.")
 
+  console.log("INSERTING:", {
+  email,
+  referenceNumber,
+})
+
   if (!referenceNumber) {
     referenceNumber = await generateReferenceNumber()
   }
@@ -292,40 +297,48 @@ export async function bulkImportApplicants(formData: FormData) {
     throw new Error("No valid applicant rows were found.")
   }
 
-  for (const row of rows) {
-    const firstName = String(row.first_name || "").trim()
-    const lastName = String(row.last_name || "").trim()
-    const email = normalizeEmail(String(row.email || "").trim())
-
-    if (!firstName) throw new Error("Each imported row must have a first name.")
-    if (!lastName) throw new Error("Each imported row must have a last name.")
-    if (!email) throw new Error("Each imported row must have an email.")
-    if (!isValidEmail(email)) {
-      throw new Error(`Invalid email found in import: ${email}`)
-    }
+  const result = {
+    total: rows.length,
+    success: [] as any[],
+    failed: [] as any[],
   }
 
   for (const row of rows) {
-    const rowEmail = normalizeEmail(String(row.email || "").trim())
-    const rowRef = String(row.reference_number || "").trim()
+    try {
+      const firstName = String(row.first_name || "").trim()
+      const lastName = String(row.last_name || "").trim()
+      const email = normalizeEmail(String(row.email || "").trim())
 
-    if (rowRef) {
-      await ensureUniqueApplicantInputs(rowEmail, rowRef)
+      if (!firstName) throw new Error("Missing first name")
+      if (!lastName) throw new Error("Missing last name")
+      if (!email) throw new Error("Missing email")
+      if (!isValidEmail(email)) throw new Error("Invalid email")
+
+      const form = new FormData()
+      form.set("reference_number", String(row.reference_number || "").trim())
+      form.set("first_name", firstName)
+      form.set("middle_name", String(row.middle_name || "").trim())
+      form.set("last_name", lastName)
+      form.set("email", email)
+
+      await createApplicant(form)
+
+      result.success.push({
+        email,
+        reference_number: row.reference_number || "AUTO",
+      })
+    } catch (err: any) {
+      result.failed.push({
+        row,
+        reason: err?.message || "Unknown error",
+      })
     }
-  }
-
-  for (const row of rows) {
-    const form = new FormData()
-    form.set("reference_number", String(row.reference_number || "").trim())
-    form.set("first_name", String(row.first_name || "").trim())
-    form.set("middle_name", String(row.middle_name || "").trim())
-    form.set("last_name", String(row.last_name || "").trim())
-    form.set("email", normalizeEmail(String(row.email || "").trim()))
-    await createApplicant(form)
   }
 
   revalidatePath("/admin/applicants")
   revalidatePath("/admin/dashboard")
+
+  return result
 }
 
 export async function getApplicantsForExport() {
